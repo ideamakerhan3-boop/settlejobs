@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { verifyAndUpgrade } from './_lib/verify.js';
 
 const sb = createClient(
   process.env.SUPABASE_URL,
@@ -73,9 +74,10 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'email and pw_hash required' });
     }
 
-    // ── Auth: verify email + pw_hash ──
-    const { data: acct } = await sb.from('accounts').select('pw, is_admin, name, company').eq('email', email.toLowerCase()).maybeSingle();
-    if (!acct || acct.pw !== pw_hash) {
+    // ── Auth: verify email + pw_hash (bcrypt with legacy SHA-256 auto-upgrade) ──
+    const em = email.toLowerCase();
+    const { data: acct } = await sb.from('accounts').select('pw, is_admin, name, company').eq('email', em).maybeSingle();
+    if (!acct || !(await verifyAndUpgrade(sb, em, pw_hash, acct.pw))) {
       return res.status(403).json({ error: 'Invalid credentials' });
     }
     const isAdmin = !!acct.is_admin;

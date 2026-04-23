@@ -1,10 +1,14 @@
 import { createClient } from '@supabase/supabase-js';
+import bcrypt from 'bcryptjs';
 
 // Service key bypasses RLS — all sensitive account/job operations go through here.
 const sb = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_SERVICE_KEY
 );
+
+const BCRYPT_ROUNDS = 12;
+const BCRYPT_PREFIX = '$2'; // bcrypt hashes start with $2a / $2b / $2y
 
 const ALLOWED_ORIGINS = [
   'https://www.canadayouthhire.ca',
@@ -39,15 +43,30 @@ function clientIp(req) {
   return (Array.isArray(xff) ? xff[0] : xff.split(',')[0]).trim() || req.socket?.remoteAddress || 'unknown';
 }
 
-// Verify account credentials, returns account row or null
+// Verify account credentials, returns account row or null.
+// Supports both legacy unsalted SHA-256 (from pre-bcrypt users) and bcrypt.
+// On successful legacy login, transparently upgrades stored hash to bcrypt.
 async function verifyAuth(email, pw_hash) {
   if (!email || !pw_hash) return null;
   const { data: acct } = await sb.from('accounts')
     .select('email, pw, name, company, is_admin, status')
     .eq('email', email.toLowerCase())
     .maybeSingle();
-  if (!acct || acct.pw !== pw_hash) return null;
-  return acct;
+  if (!acct) return null;
+  let ok = false;
+  if (acct.pw && acct.pw.startsWith(BCRYPT_PREFIX)) {
+    ok = await bcrypt.compare(pw_hash, acct.pw);
+  } else if (acct.pw === pw_hash) {
+    // Legacy plain SHA-256 match — upgrade to bcrypt on-the-fly
+    ok = true;
+    try {
+      const upgraded = await bcrypt.hash(pw_hash, BCRYPT_ROUNDS);
+      await sb.from('accounts').update({ pw: upgraded }).eq('email', acct.email);
+    } catch (e) {
+      console.error('bcrypt upgrade failed for', acct.email, e.message);
+    }
+  }
+  return ok ? acct : null;
 }
 
 export default async function handler(req, res) {
@@ -82,9 +101,10 @@ export default async function handler(req, res) {
         return res.status(409).json({ error: 'Account already exists with this email' });
       }
 
-      // Insert new account (preserve is_admin=false for new accounts)
+      // Insert new account with bcrypt-hashed password (salt is embedded)
+      const hashedPw = await bcrypt.hash(pw_hash, BCRYPT_ROUNDS);
       const { error: insErr } = await sb.from('accounts').insert({
-        email: em, pw: pw_hash, name: name || '', company: company || '', is_admin: false, status: 'active',
+        email: em, pw: hashedPw, name: name || '', company: company || '', is_admin: false, status: 'active',
         created_at: new Date().toISOString()
       });
       if (insErr) {
@@ -110,7 +130,20 @@ export default async function handler(req, res) {
       const { data: admins } = await sb.from('accounts')
         .select('email, name, company, pw')
         .eq('is_admin', true);
-      const match = (admins || []).find(a => a.pw === pw_hash);
+      let match = null;
+      for (const a of (admins || [])) {
+        if (a.pw && a.pw.startsWith(BCRYPT_PREFIX)) {
+          if (await bcrypt.compare(pw_hash, a.pw)) { match = a; break; }
+        } else if (a.pw === pw_hash) {
+          match = a;
+          // Upgrade legacy admin hash
+          try {
+            const upgraded = await bcrypt.hash(pw_hash, BCRYPT_ROUNDS);
+            await sb.from('accounts').update({ pw: upgraded }).eq('email', a.email);
+          } catch (e) { console.error('admin bcrypt upgrade failed:', e.message); }
+          break;
+        }
+      }
       if (!match) {
         console.warn('admin_login_by_pw_only: no match');
         return res.status(403).json({ error: 'Incorrect admin password' });
@@ -160,7 +193,7 @@ export default async function handler(req, res) {
       if (phone !== undefined) patch.phone = phone;
       if (new_pw_hash) {
         if (!/^[a-f0-9]{64}$/.test(new_pw_hash)) return res.status(400).json({ error: 'invalid new_pw_hash' });
-        patch.pw = new_pw_hash;
+        patch.pw = await bcrypt.hash(new_pw_hash, BCRYPT_ROUNDS);
       }
       if (Object.keys(patch).length === 0) return res.status(400).json({ error: 'No fields to update' });
       const { error } = await sb.from('accounts').update(patch).eq('email', em);

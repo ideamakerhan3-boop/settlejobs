@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { verifyAndUpgrade } from './_lib/verify.js';
 
 // Service key bypasses RLS. All admin operations gated by is_admin check.
 const sb = createClient(
@@ -23,12 +24,14 @@ function setCors(req, res) {
 
 async function verifyAdmin(email, pw_hash) {
   if (!email || !pw_hash) return null;
+  const em = email.toLowerCase();
   const { data: acct } = await sb.from('accounts')
     .select('email, pw, is_admin')
-    .eq('email', email.toLowerCase())
+    .eq('email', em)
     .maybeSingle();
-  if (!acct || acct.pw !== pw_hash || !acct.is_admin) return null;
-  return acct;
+  if (!acct || !acct.is_admin) return null;
+  const ok = await verifyAndUpgrade(sb, em, pw_hash, acct.pw);
+  return ok ? acct : null;
 }
 
 export default async function handler(req, res) {

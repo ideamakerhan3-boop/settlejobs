@@ -1,5 +1,6 @@
 import Stripe from 'stripe';
 import { createClient } from '@supabase/supabase-js';
+import { verifyAndUpgrade } from './_lib/verify.js';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 const sb = createClient(
@@ -29,14 +30,15 @@ export default async function handler(req, res) {
     return res.status(403).json({ error: 'Unauthorized: credentials required' });
   }
 
-  // DB에서 관리자 확인
+  // DB에서 관리자 확인 (bcrypt + legacy SHA-256 auto-upgrade)
+  const em = email.toLowerCase();
   const { data: acct } = await sb
     .from('accounts')
     .select('pw, is_admin')
-    .eq('email', email.toLowerCase())
+    .eq('email', em)
     .maybeSingle();
 
-  if (!acct || !acct.is_admin || acct.pw !== pw_hash) {
+  if (!acct || !acct.is_admin || !(await verifyAndUpgrade(sb, em, pw_hash, acct.pw))) {
     return res.status(403).json({ error: 'Unauthorized: admin only' });
   }
 
