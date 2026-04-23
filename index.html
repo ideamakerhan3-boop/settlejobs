@@ -2243,8 +2243,10 @@ function doRegister() {
         var msg = (reg && reg.error) || '';
         if(msg && msg.toLowerCase().indexOf('already') >= 0){
           err('r-email','This email is already registered. Please sign in.');
-        } else if(msg === 'network' || reg && reg._http){
+        } else if(msg === 'network'){
           showToast('❌ Network error. Check your connection and try again.','error');
+        } else if(reg && reg._http === 429){
+          showToast('⏱️ ' + (msg || 'Too many attempts. Please wait a few minutes.'),'warn');
         } else {
           showToast('❌ ' + (msg || 'Registration failed. Please try again.'),'error');
         }
@@ -2337,11 +2339,21 @@ function doLogin() {
 
   // Server-side auth via /api/auth-api login (never returns pw to client)
   hashPw(pw).then(function(pwHash) {
-  dbLogin(em, pwHash).then(function(dbAcct) {
-    if(!dbAcct) {
-      err('l-pw','Incorrect email or password. Please try again.');
+  _apiCall('/api/auth-api', {action:'login', email:em, pw_hash:pwHash}).then(function(r) {
+    if(!r || r.error) {
+      var emsg = (r && r.error) || '';
+      if(emsg === 'network'){
+        showToast('❌ Network error. Check your connection and try again.','error');
+      } else if(r && r._http === 429){
+        showToast('⏱️ ' + (emsg || 'Too many login attempts. Please wait a few minutes.'),'warn');
+      } else if(emsg && emsg.toLowerCase().indexOf('suspended') >= 0){
+        showToast('🚫 Your account has been suspended. Please contact support.','error');
+      } else {
+        err('l-pw','Incorrect email or password. Please try again.');
+      }
       return;
     }
+    var dbAcct = {email: r.email, name: r.name, company: r.company, is_admin: !!r.is_admin};
     // Cache minimal profile (pw_hash kept client-side only for future API calls)
     _ACCOUNTS[em] = { pw: pwHash, name: dbAcct.name, company: dbAcct.company, is_admin: !!dbAcct.is_admin };
     var acct = _ACCOUNTS[em];
@@ -2420,42 +2432,9 @@ function loadDashForEmail(em) {
   });
 }
 
-function doForgot() {
-  var em = (document.getElementById('fp-email').value||'').trim().toLowerCase();
-  if(!em||em.indexOf('@')<1){ err('fp-email','Please enter a valid email.'); return; }
-  var chars='ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
-  var tmp=''; for(var i=0;i<8;i++) tmp+=chars[Math.floor(Math.random()*chars.length)];
-  // DB에서 계정 확인 후 임시 비번 업데이트
-  dbGetAccount(em).then(function(dbAcct) {
-    if(dbAcct) {
-      _ACCOUNTS[em] = { pw: dbAcct.pw, name: dbAcct.name, company: dbAcct.company };
-    }
-    var acct = _ACCOUNTS[em];
-    if(acct){
-      acct.pw = tmp;
-      dbSaveAccount(em, tmp, acct.name, acct.company);
-      // EmailJS로 임시 비번 이메일 발송
-      sendPasswordResetEmail(em, acct.name, tmp).then(function() {
-        showToast('📬 Temporary password sent to your email. Please check your inbox.','success');
-      }).catch(function() {
-        // EmailJS 미설정 시 화면에 표시 (fallback)
-        var box = document.getElementById('fp-tmp-box');
-        var pw2 = document.getElementById('fp-tmp-pw');
-        if(box && pw2){ pw2.textContent = tmp; box.style.display='block'; }
-        showToast('📬 Temporary password set. Please sign in and change it.','success');
-      });
-      // EmailJS 미설정 상태면 화면에도 표시 (fallback)
-      if(EJS_PUBLIC_KEY === 'YOUR_PUBLIC_KEY') {
-        var box = document.getElementById('fp-tmp-box');
-        var pw2 = document.getElementById('fp-tmp-pw');
-        if(box && pw2){ pw2.textContent = tmp; box.style.display='block'; }
-      }
-    } else {
-      showToast('📬 If an account exists for that email, a reset link has been sent.','success');
-      setTimeout(function(){ go('login'); }, 1800);
-    }
-  });
-}
+// Self-service password reset is intentionally disabled until a verified-email
+// reset flow is built (requires server-side email + one-time token storage).
+// The /forgot page directs users to support@canadayouthhire.ca instead.
 
 function doLogout() {
   _isLoggedIn = false;
@@ -7028,20 +7007,14 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
     <button class="back-btn" onclick="go('login')">← Back to Sign In</button>
     <div class="form-header">
       <h1>Reset Password</h1>
-      <p>We'll send a reset link to your email address.</p>
+      <p>Need to reset your password? Our team will help you recover your account.</p>
     </div>
-    <div class="fg">
-      <label for="fp-email">Email <span class="req">*</span></label>
-      <input class="fc" type="email" id="fp-email" placeholder="you@company.ca" autocomplete="email">
+    <div style="background:var(--redl);border:1.5px solid rgba(37,99,235,.18);border-radius:12px;padding:20px 22px;margin-bottom:18px">
+      <div style="font-size:14px;font-weight:700;color:var(--ink);margin-bottom:10px">📧 Contact Support</div>
+      <div style="font-size:13.5px;color:var(--gray);line-height:1.6;margin-bottom:14px">Email us at <a href="mailto:support@canadayouthhire.ca?subject=Password%20Reset%20Request" style="color:var(--blue);font-weight:700;text-decoration:underline">support@canadayouthhire.ca</a> from the email address on your account and include your company name. We'll verify your identity and issue a secure reset within 1 business day.</div>
+      <div style="font-size:12px;color:var(--muted);line-height:1.5">For your security, we do not currently support self-service password reset. A verified-email reset flow is on our roadmap.</div>
     </div>
-    <button class="btn btn-primary btn-full btn-lg" onclick="doForgot()">Send Reset Link</button>
-    <!-- 임시 비번 표시 박스 (EmailJS 연동 전) -->
-    <div id="fp-tmp-box" style="display:none;margin-top:20px;background:#FFF7E0;border:1.5px solid #FBB924;border-radius:12px;padding:16px 18px">
-      <div style="font-size:12px;font-weight:800;color:#A06000;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">⚠️ Temporary Password (Session Only)</div>
-      <div style="font-size:22px;font-weight:900;letter-spacing:3px;color:#0F0F0F;font-family:monospace;margin-bottom:8px" id="fp-tmp-pw"></div>
-      <div style="font-size:12px;color:#7A5800;line-height:1.5">Use this to sign in now. <strong>Change your password immediately after logging in.</strong> This is only available until you close this window.</div>
-      <button class="btn btn-outline btn-sm" style="margin-top:12px;width:100%" onclick="go('login')">Go to Sign In →</button>
-    </div>
+    <a href="mailto:support@canadayouthhire.ca?subject=Password%20Reset%20Request" class="btn btn-primary btn-full btn-lg" style="display:flex;align-items:center;justify-content:center;text-decoration:none">Email Support to Reset</a>
   </div>
 </div>
 
