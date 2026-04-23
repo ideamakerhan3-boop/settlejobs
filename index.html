@@ -164,6 +164,15 @@ img{display:block;max-width:100%}
 .hero-pill.active{background:var(--red);border-color:var(--red);color:#fff;box-shadow:0 2px 10px rgba(37,99,235,.4)}
 .hero-pill:hover{background:rgba(255,255,255,.16);color:#fff;border-color:rgba(255,255,255,.28)}
 
+/* ═══ PJ CHIPS (Indeed-style multi/single select) ═══ */
+.pj-chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px}
+.pj-chip{display:inline-flex;align-items:center;gap:6px;background:#F3F4F6;border:1.5px solid transparent;color:var(--ink);padding:8px 14px 8px 12px;border-radius:100px;font-size:13.5px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .15s;user-select:none;letter-spacing:-.01em}
+.pj-chip::before{content:"+";font-size:15px;font-weight:700;color:var(--muted);line-height:1}
+.pj-chip:hover{background:#E5E7EB;border-color:#D1D5DB}
+.pj-chip.active{background:var(--redl);color:var(--red);border-color:var(--red)}
+.pj-chip.active::before{content:"✓";color:var(--red)}
+.pj-chips-head{font-size:12.5px;font-weight:700;color:var(--muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px}
+
 /* ═══ HH HERO V2 (light, big, Indeed-style for youth) ═══ */
 .hh-banner{background:linear-gradient(90deg,#065F46,#047857);color:#fff;padding:11px 4%;text-align:center;font-size:13px;font-weight:600;letter-spacing:.1px;display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap}
 .hh-banner strong{color:#FFE27A;font-weight:800}
@@ -1609,6 +1618,44 @@ function requireRegister(returnTo) {
   showToast('Create an account to continue.','warn');
 }
 
+// ═══ PJ CHIPS (Indeed-style toggles for post-job form) ═══
+function togglePJChip(btn){
+  var grp = btn.closest('.pj-chips');
+  if(!grp) return;
+  var mode = grp.dataset.mode || 'single';
+  if(mode === 'single'){
+    grp.querySelectorAll('.pj-chip').forEach(function(c){ if(c!==btn) c.classList.remove('active'); });
+    btn.classList.toggle('active');
+  } else {
+    btn.classList.toggle('active');
+  }
+  syncPJChipHidden(grp);
+}
+function syncPJChipHidden(grp){
+  var group = grp.dataset.group;
+  var vals = Array.from(grp.querySelectorAll('.pj-chip.active')).map(function(c){ return c.dataset.val; });
+  var idMap = { type:'pj-type', perfect:'pj-perfect', schedule:'pj-schedule', age:'pj-minage' };
+  var id = idMap[group]; if(!id) return;
+  var h = document.getElementById(id); if(!h) return;
+  h.value = vals.join(', ');
+}
+function mergeYouthTagsIntoDesc(){
+  var perfect = (document.getElementById('pj-perfect')||{}).value || '';
+  var schedule = (document.getElementById('pj-schedule')||{}).value || '';
+  var age = (document.getElementById('pj-minage')||{}).value || '';
+  var hrs = ((document.getElementById('pj-hours')||{}).value || '').trim();
+  var lines = [];
+  if(perfect) lines.push('👉 Perfect for: ' + perfect);
+  if(schedule) lines.push('⏰ Schedule: ' + schedule);
+  if(hrs) lines.push('🕒 Hours: ' + hrs);
+  if(age) lines.push('🔞 Minimum age: ' + age);
+  var d = document.getElementById('pj-desc'); if(!d) return;
+  var cur = d.value || '';
+  // Strip any existing youth header block (consecutive lines starting with one of the emojis)
+  cur = cur.replace(/^(?:(?:👉|⏰|🕒|🔞)[^\n]*\n?)+\n*/,'');
+  d.value = (lines.length ? lines.join('\n') + '\n\n' : '') + cur;
+}
+
 // ═══ CANADA CITIES (autocomplete) ═══
 var CA_CITIES = [
   'Toronto, ON','Vancouver, BC','Montreal, QC','Calgary, AB','Ottawa, ON','Edmonton, AB',
@@ -2474,6 +2521,8 @@ var CITY_PROV_MAP = {
 
 function openComplianceModal() {
   try {
+  // Prepend youth tags (Perfect For / Schedule / Hours / Min age) into description
+  mergeYouthTagsIntoDesc();
   var t=(document.getElementById('pj-title').value||'').trim();
   var cat=(document.getElementById('pj-cat').value||'').trim();
   var city=(document.getElementById('pj-city').value||'').trim();
@@ -2527,6 +2576,7 @@ function _runComplianceChecks() {
   var jobtype=(document.getElementById('pj-type').value||'').trim();
 
   if(!cat){ err('pj-cat','Category is required.'); document.getElementById('pj-cat').scrollIntoView({behavior:'smooth',block:'center'}); return; }
+  if(!jobtype){ err('pj-title','Pick a job type (Part-time, Full-time, etc).'); var chip=document.querySelector('.pj-chips[data-group=type]'); if(chip) chip.scrollIntoView({behavior:'smooth',block:'center'}); return; }
   if(!city){ err('pj-city','Work city is required.'); document.getElementById('pj-city').scrollIntoView({behavior:'smooth',block:'center'}); return; }
   if(!prov){ err('pj-prov','Province is required.'); document.getElementById('pj-prov').scrollIntoView({behavior:'smooth',block:'center'}); return; }
 
@@ -7003,17 +7053,68 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
           </select>
         </div>
         <div class="fg">
-          <label for="pj-type">Employment Type <span class="req">*</span></label>
-          <select class="fc" id="pj-type">
-            <option value="Full-Time">Full-Time</option>
-            <option value="Part-Time">Part-Time</option>
-            <option value="Contract">Contract</option>
-            <option value="Seasonal">Seasonal</option>
-            <option value="Casual">Casual / On-call</option>
-          </select>
+          <label>Job Type <span class="req">*</span></label>
+          <div class="pj-chips" data-group="type" data-mode="single">
+            <button type="button" class="pj-chip" data-val="Part-Time" onclick="togglePJChip(this)">Part-time</button>
+            <button type="button" class="pj-chip" data-val="Full-Time" onclick="togglePJChip(this)">Full-time</button>
+            <button type="button" class="pj-chip" data-val="Summer Job" onclick="togglePJChip(this)">Summer job</button>
+            <button type="button" class="pj-chip" data-val="Seasonal" onclick="togglePJChip(this)">Seasonal</button>
+            <button type="button" class="pj-chip" data-val="Internship" onclick="togglePJChip(this)">Internship / Co-op</button>
+            <button type="button" class="pj-chip" data-val="Contract" onclick="togglePJChip(this)">Contract</button>
+            <button type="button" class="pj-chip" data-val="Casual" onclick="togglePJChip(this)">Casual / On-call</button>
+          </div>
+          <input type="hidden" id="pj-type" value="">
         </div>
       </div>
       <div id="pj-icon-badge" class="icon-preview-badge" style="display:none"></div>
+    </div>
+
+    <!-- Perfect For (youth-specific tags) -->
+    <div class="post-section">
+      <div class="post-section-head">Perfect For <span style="text-transform:none;letter-spacing:0;font-weight:500;font-size:11px;color:var(--muted)">— help young applicants see if this role fits them</span></div>
+      <div class="pj-chips" data-group="perfect" data-mode="multi">
+        <button type="button" class="pj-chip" data-val="No experience needed" onclick="togglePJChip(this)">No experience needed</button>
+        <button type="button" class="pj-chip" data-val="First job friendly" onclick="togglePJChip(this)">First job friendly</button>
+        <button type="button" class="pj-chip" data-val="Students" onclick="togglePJChip(this)">Students</button>
+        <button type="button" class="pj-chip" data-val="High school (15–18)" onclick="togglePJChip(this)">High school (15–18)</button>
+        <button type="button" class="pj-chip" data-val="Recent grads" onclick="togglePJChip(this)">Recent grads</button>
+        <button type="button" class="pj-chip" data-val="Training provided" onclick="togglePJChip(this)">Training provided</button>
+        <button type="button" class="pj-chip" data-val="Flexible for school" onclick="togglePJChip(this)">Flexible for school</button>
+        <button type="button" class="pj-chip" data-val="Paid weekly" onclick="togglePJChip(this)">Paid weekly</button>
+        <button type="button" class="pj-chip" data-val="Tips included" onclick="togglePJChip(this)">Tips included</button>
+      </div>
+      <input type="hidden" id="pj-perfect" value="">
+    </div>
+
+    <!-- Schedule -->
+    <div class="post-section">
+      <div class="post-section-head">Schedule <span style="text-transform:none;letter-spacing:0;font-weight:500;font-size:11px;color:var(--muted)">— when will they work?</span></div>
+      <div class="pj-chips" data-group="schedule" data-mode="multi">
+        <button type="button" class="pj-chip" data-val="Daytime" onclick="togglePJChip(this)">Daytime</button>
+        <button type="button" class="pj-chip" data-val="Evenings" onclick="togglePJChip(this)">Evenings</button>
+        <button type="button" class="pj-chip" data-val="Weekends" onclick="togglePJChip(this)">Weekends</button>
+        <button type="button" class="pj-chip" data-val="After school" onclick="togglePJChip(this)">After school</button>
+        <button type="button" class="pj-chip" data-val="Overnight" onclick="togglePJChip(this)">Overnight</button>
+        <button type="button" class="pj-chip" data-val="Flexible hours" onclick="togglePJChip(this)">Flexible hours</button>
+      </div>
+      <input type="hidden" id="pj-schedule" value="">
+      <div class="field-row" style="margin-top:14px">
+        <div class="fg">
+          <label for="pj-hours">Hours per week <span class="opt">(optional)</span></label>
+          <input class="fc" type="text" id="pj-hours" placeholder="e.g. up to 20 hrs, flexible 10–25" maxlength="40">
+        </div>
+        <div class="fg">
+          <label>Minimum age</label>
+          <div class="pj-chips" data-group="age" data-mode="single">
+            <button type="button" class="pj-chip" data-val="No minimum" onclick="togglePJChip(this)">No minimum</button>
+            <button type="button" class="pj-chip" data-val="14+" onclick="togglePJChip(this)">14+</button>
+            <button type="button" class="pj-chip" data-val="16+" onclick="togglePJChip(this)">16+</button>
+            <button type="button" class="pj-chip" data-val="18+" onclick="togglePJChip(this)">18+</button>
+            <button type="button" class="pj-chip" data-val="19+" onclick="togglePJChip(this)">19+</button>
+          </div>
+          <input type="hidden" id="pj-minage" value="">
+        </div>
+      </div>
     </div>
 
     <!-- Location -->
@@ -7073,34 +7174,33 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
         </div>
         <div style="font-size:12px;color:var(--green);font-weight:600;margin-top:6px;min-height:18px" id="sal-prev"></div>
         <input type="hidden" id="pj-salary">
-        <div class="fh warn">⚠️ Ontario ESA (2026): employers with 25+ employees must disclose pay range. Never advertise below provincial minimum wage.</div>
+        <div class="fh">💡 Be honest and specific — students decide fast based on pay. Must meet provincial minimum wage.</div>
       </div>
       <div class="field-row">
         <div class="fg">
-          <label for="pj-vacancy">Position Type <span class="req">*</span></label>
-          <select class="fc" id="pj-vacancy">
-            <option value="new">New position</option>
-            <option value="backfill">Backfill (replacing employee)</option>
-          </select>
-          <div class="fh">Transparency helps candidates. Ontario 25+ employee companies: required by law.</div>
+          <label for="pj-vacancies">Number of openings</label>
+          <input class="fc" type="number" id="pj-vacancies" min="1" value="1">
         </div>
         <div class="fg">
-          <label for="pj-vacancies">Number of Vacancies</label>
-          <input class="fc" type="number" id="pj-vacancies" min="1" value="1">
+          <label for="pj-vacancy">Position type</label>
+          <select class="fc" id="pj-vacancy">
+            <option value="new">New position</option>
+            <option value="backfill">Backfill</option>
+          </select>
         </div>
       </div>
     </div>
 
-    <!-- Legal -->
+    <!-- AI screening disclosure (compact) -->
     <div class="post-section">
-      <div class="post-section-head">Legal Compliance</div>
+      <div class="post-section-head">AI Screening</div>
       <div class="fg">
-        <label for="pj-ai">AI Used in Hiring Screening? <span class="req">*</span></label>
+        <label for="pj-ai" style="font-size:13.5px;font-weight:600">Do you use AI to screen or rank applicants?</label>
         <select class="fc" id="pj-ai">
-          <option value="no">No — we do not use AI to screen applicants</option>
-          <option value="yes">Yes — AI is used to screen or rank applicants</option>
+          <option value="no">No</option>
+          <option value="yes">Yes</option>
         </select>
-        <div class="fh info">🤖 Required disclosure under Canadian AI transparency legislation.</div>
+        <div class="fh">Required disclosure under Canadian hiring-transparency rules.</div>
       </div>
     </div>
 
@@ -7147,9 +7247,9 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
       </div>
       <div class="fg">
         <label for="pj-req">Additional Requirements <span class="opt">(optional)</span></label>
-        <textarea class="fc" id="pj-req" style="min-height:90px" maxlength="1000" placeholder="Specific skills, certifications, licences, or other requirements. Do NOT require 'Canadian experience' — this may violate the CHRA." oninput="updateCC(this,'pj-rc',1000)"></textarea>
+        <textarea class="fc" id="pj-req" style="min-height:90px" maxlength="1000" placeholder="Skills, certifications, or must-haves. Focus on what they actually need to start — not a wishlist." oninput="updateCC(this,'pj-rc',1000)"></textarea>
         <div class="fh" style="text-align:right"><span id="pj-rc">0</span>/1000</div>
-        <div class="fh warn">⚠️ Requiring "Canadian experience" may violate the <em>Canadian Human Rights Act</em>. Focus on transferable skills.</div>
+        <div class="fh">💡 Avoid requiring "Canadian experience" — it may violate the Canadian Human Rights Act. Focus on transferable skills.</div>
       </div>
       <div class="fg">
         <label for="pj-ben">Benefits &amp; Perks <span class="opt">(optional)</span></label>
