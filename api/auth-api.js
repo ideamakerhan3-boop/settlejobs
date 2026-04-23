@@ -21,6 +21,24 @@ function setCors(req, res) {
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 }
 
+// In-memory rate limiter. Per-instance only (Vercel serverless warm state),
+// but cuts brute-force burst significantly. Upgrade to Upstash/KV later.
+const _rlStore = new Map();
+function rateLimit(key, maxAttempts, windowMs) {
+  const now = Date.now();
+  const rec = _rlStore.get(key);
+  if (!rec || now - rec.firstAt > windowMs) {
+    _rlStore.set(key, { count: 1, firstAt: now });
+    return true;
+  }
+  rec.count++;
+  return rec.count <= maxAttempts;
+}
+function clientIp(req) {
+  const xff = req.headers['x-forwarded-for'] || '';
+  return (Array.isArray(xff) ? xff[0] : xff.split(',')[0]).trim() || req.socket?.remoteAddress || 'unknown';
+}
+
 // Verify account credentials, returns account row or null
 async function verifyAuth(email, pw_hash) {
   if (!email || !pw_hash) return null;
@@ -40,12 +58,22 @@ export default async function handler(req, res) {
   try {
     const body = req.body || {};
     const { action } = body;
+    const ip = clientIp(req);
 
     // ──────────────── REGISTER (no prior auth) ────────────────
     if (action === 'register') {
       const { email, pw_hash, name, company } = body;
       if (!email || !pw_hash) return res.status(400).json({ error: 'email and pw_hash required' });
       if (!/^[a-f0-9]{64}$/.test(pw_hash)) return res.status(400).json({ error: 'invalid pw_hash format' });
+      // Input length hard caps (defense against oversized payloads)
+      if (email.length > 254) return res.status(400).json({ error: 'email too long' });
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ error: 'invalid email format' });
+      if (name && String(name).length > 120) return res.status(400).json({ error: 'name too long' });
+      if (company && String(company).length > 160) return res.status(400).json({ error: 'company too long' });
+      // Rate limit: 5 registrations per IP per 10 min
+      if (!rateLimit('reg:' + ip, 5, 600_000)) {
+        return res.status(429).json({ error: 'Too many registration attempts. Try again later.' });
+      }
       const em = email.toLowerCase();
 
       // Check if already exists
@@ -75,6 +103,10 @@ export default async function handler(req, res) {
       if (!pw_hash || !/^[a-f0-9]{64}$/.test(pw_hash)) {
         return res.status(400).json({ error: 'pw_hash required (64-char hex)' });
       }
+      // Rate limit: 5 attempts per IP per 10 min (admin is highest value target)
+      if (!rateLimit('adminpw:' + ip, 5, 600_000)) {
+        return res.status(429).json({ error: 'Too many attempts. Try again later.' });
+      }
       const { data: admins } = await sb.from('accounts')
         .select('email, name, company, pw')
         .eq('is_admin', true);
@@ -92,6 +124,10 @@ export default async function handler(req, res) {
     // ──────────────── LOGIN (verify creds, return profile) ────────────────
     if (action === 'login') {
       const { email, pw_hash } = body;
+      // Rate limit: 10 attempts per IP+email per 10 min
+      if (!rateLimit('login:' + ip + ':' + (email || '').toLowerCase(), 10, 600_000)) {
+        return res.status(429).json({ error: 'Too many login attempts. Try again in a few minutes.' });
+      }
       const acct = await verifyAuth(email, pw_hash);
       if (!acct) return res.status(403).json({ error: 'Invalid credentials' });
       if (acct.status === 'suspended') return res.status(403).json({ error: 'Account suspended' });
