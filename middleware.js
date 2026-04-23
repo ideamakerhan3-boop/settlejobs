@@ -8,8 +8,16 @@ export const config = {
 export default function middleware(req) {
   const env = process.env.VERCEL_ENV || 'development';
 
-  // Only gate preview/development. Production stays open.
+  // Production: enforce apex -> www canonical (SEO + HSTS parity).
   if (env === 'production') {
+    const host = req.headers.get('host') || '';
+    if (host === 'canadayouthhire.ca') {
+      const url = new URL(req.url);
+      return Response.redirect(
+        'https://www.canadayouthhire.ca' + url.pathname + url.search,
+        301
+      );
+    }
     return;
   }
 
