@@ -81,6 +81,13 @@ export default async function handler(req, res) {
 
     // ──────────────── REGISTER (no prior auth) ────────────────
     if (action === 'register') {
+      // Honeypot: legitimate registrations never set these fields.
+      // Naive bots auto-fill any field named website/url/homepage/phone_number.
+      // If set, silently succeed (200) so bots think they passed — no DB write, no alert leak.
+      if (body.website || body.url || body.homepage || body.phone_number) {
+        console.warn('honeypot tripped from IP', ip);
+        return res.status(200).json({ ok: true, email: 'silent@honeypot', name: '', company: '', is_admin: false });
+      }
       const { email, pw_hash, name, company } = body;
       if (!email || !pw_hash) return res.status(400).json({ error: 'email and pw_hash required' });
       if (!/^[a-f0-9]{64}$/.test(pw_hash)) return res.status(400).json({ error: 'invalid pw_hash format' });
