@@ -1827,20 +1827,20 @@ function renderJobs(list, append) {
     var isExpired = j.status === 'expired';
     var cls = 'jcard' + (isJB ? ' jobbank' : '') + (j.featured ? ' featured' : '') + (isClosed ? ' jcard-closed' : '') + (isExpired ? ' jcard-expired' : '');
     var jid = j.id;
-    parts.push('<div class="' + cls + '" data-jid="' + jid + '" onclick="openJob(this.dataset.jid)" tabindex="0" role="listitem">');
-    parts.push('<div class="j-logo" aria-hidden="true">' + j.icon + '</div>');
+    parts.push('<div class="' + cls + '" data-jid="' + escHtml(jid) + '" onclick="openJob(this.dataset.jid)" tabindex="0" role="listitem">');
+    parts.push('<div class="j-logo" aria-hidden="true">' + escHtml(j.icon) + '</div>');
     parts.push('<div class="j-body">');
-    parts.push('<div class="j-title">' + j.title + '</div>');
-    parts.push('<div class="j-company">' + j.company + ' &middot; ' + j.loc + '</div>');
+    parts.push('<div class="j-title">' + escHtml(j.title) + '</div>');
+    parts.push('<div class="j-company">' + escHtml(j.company) + ' &middot; ' + escHtml(j.loc) + '</div>');
     parts.push('<div class="j-tags">');
-    parts.push('<span class="j-tag">' + j.type + '</span>');
-    if(j.cat) parts.push('<span class="j-tag j-tag-blue">' + j.cat + '</span>');
+    parts.push('<span class="j-tag">' + escHtml(j.type) + '</span>');
+    if(j.cat) parts.push('<span class="j-tag j-tag-blue">' + escHtml(j.cat) + '</span>');
     if(j.indigenous) parts.push('<span class="j-tag" style="background:#FEF3C7;color:#92400E;border-color:#FDE68A;font-weight:700">Youth-Friendly</span>');
     if(isJB) parts.push('<span class="j-tag j-tag-blue">🇨🇦 Job Bank</span>');
-    if(j.salary) parts.push('<span class="j-tag j-salary-inline" style="color:var(--green);border-color:#B8DCC7;background:var(--greenl);font-weight:700">' + j.salary + '</span>');
+    if(j.salary) parts.push('<span class="j-tag j-salary-inline" style="color:var(--green);border-color:#B8DCC7;background:var(--greenl);font-weight:700">' + escHtml(j.salary) + '</span>');
     parts.push('</div></div>');
     parts.push('<div class="j-right">');
-    if(j.salary) parts.push('<div class="j-salary">' + j.salary + '</div>');
+    if(j.salary) parts.push('<div class="j-salary">' + escHtml(j.salary) + '</div>');
     parts.push('<div class="j-date">' + j.date + '</div>');
     // 모바일에서는 j-right 숨김 - salary를 태그 안에 별도 표시
     parts.push('</div></div>');
@@ -1874,27 +1874,27 @@ function openJob(id) {
 
   // ── Header ──
   h+='<div class="detail-header">';
-  h+='<div class="detail-logo">'+j.icon+'</div>';
+  h+='<div class="detail-logo">'+escHtml(j.icon)+'</div>';
   h+='<div class="detail-meta-col">';
-  h+='<div class="detail-title">'+j.title+'</div>';
-  h+='<div class="detail-company">'+j.company+'</div>';
+  h+='<div class="detail-title">'+escHtml(j.title)+'</div>';
+  h+='<div class="detail-company">'+escHtml(j.company)+'</div>';
   h+='<div class="detail-tags">';
-  h+='<span class="detail-tag">📍 '+j.loc+'</span>';
-  h+='<span class="detail-tag">'+j.type+'</span>';
-  if(j.salary) h+='<span class="detail-tag" style="color:var(--green);font-weight:700">💰 '+j.salary+'</span>';
+  h+='<span class="detail-tag">📍 '+escHtml(j.loc)+'</span>';
+  h+='<span class="detail-tag">'+escHtml(j.type)+'</span>';
+  if(j.salary) h+='<span class="detail-tag" style="color:var(--green);font-weight:700">💰 '+escHtml(j.salary)+'</span>';
   if(j.remote) h+='<span class="detail-tag">'+ {onsite:'🏢 On-site',hybrid:'🔀 Hybrid',remote:'🌐 Remote'}[j.remote]+'</span>';
   if(j.vacancy) h+='<span class="detail-tag">'+( j.vacancy==='new'?'🆕 New position':'🔄 Backfill')+'</span>';
   if(j.ai==='yes') h+='<span class="detail-tag" title="AI screening">🤖 AI screening</span>';
   h+='</div>';
   // ── Posted date + LMIA structured fields ──
   h+='<div style="margin-top:10px;font-size:12.5px;color:var(--muted);display:flex;flex-wrap:wrap;gap:16px;align-items:center;row-gap:6px">';
-  h+='<span>📅 Posted: '+j.date+'</span>';
-  h+='<span>⏳ Expires: '+j.exp+'</span>';
+  h+='<span>📅 Posted: '+escHtml(j.date)+'</span>';
+  h+='<span>⏳ Expires: '+escHtml(j.exp)+'</span>';
   // Duration 계산
   (function(){ try{ var _M=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]; function _p(s){if(!s)return null;var p=s.replace(",","").split(" ");var m=_M.indexOf(p[0]);if(m<0)return null;return new Date(parseInt(p[2]),m,parseInt(p[1]));} var d1=_p(j.date),d2=_p(j.exp); if(d1&&d2){var days=Math.round((d2-d1)/86400000); h+='<span>📆 Duration: '+days+' days</span>';} }catch(e){} })();
-  if(j.lang) h+='<span>🗣 Language: <strong style="color:var(--ink)">'+j.lang+'</strong></span>';
-  if(j.edu)  h+='<span>🎓 Education: <strong style="color:var(--ink)">'+j.edu+'</strong></span>';
-  if(j.expReq) h+='<span>💼 Experience: <strong style="color:var(--ink)">'+j.expReq+'</strong></span>';
+  if(j.lang) h+='<span>🗣 Language: <strong style="color:var(--ink)">'+escHtml(j.lang)+'</strong></span>';
+  if(j.edu)  h+='<span>🎓 Education: <strong style="color:var(--ink)">'+escHtml(j.edu)+'</strong></span>';
+  if(j.expReq) h+='<span>💼 Experience: <strong style="color:var(--ink)">'+escHtml(j.expReq)+'</strong></span>';
   h+='</div>';
   h+='</div>';
   // ── Apply button (right col of header) ──
@@ -1904,10 +1904,10 @@ function openJob(id) {
   // ── Body grid ──
   h+='<div class="detail-grid">';
 
-  // Left: description
-  h+='<div><div class="detail-card"><h3>About the Role</h3><p>'+j.desc+'</p>';
-  if(j.req && j.req.length){h+='<h3 style="margin-top:16px">Requirements</h3><ul>';j.req.forEach(function(r){h+='<li>'+r+'</li>';});h+='</ul>';}
-  if(j.ben && j.ben.length){h+='<h3 style="margin-top:16px">Benefits &amp; Perks</h3><ul>';j.ben.forEach(function(b){h+='<li>'+b+'</li>';});h+='</ul>';}
+  // Left: description (escape + keep line breaks)
+  h+='<div><div class="detail-card"><h3>About the Role</h3><p style="white-space:pre-wrap">'+escHtml(j.desc)+'</p>';
+  if(j.req && j.req.length){h+='<h3 style="margin-top:16px">Requirements</h3><ul>';j.req.forEach(function(r){h+='<li>'+escHtml(r)+'</li>';});h+='</ul>';}
+  if(j.ben && j.ben.length){h+='<h3 style="margin-top:16px">Benefits &amp; Perks</h3><ul>';j.ben.forEach(function(b){h+='<li>'+escHtml(b)+'</li>';});h+='</ul>';}
   h+='</div>';
   h+='<div class="rights-note"><strong>🍁 Your Rights as a Candidate in Canada</strong>Employers cannot legally require \"Canadian experience\" as a condition of employment. You have the right to accommodation during the hiring process. To report discrimination, contact the <a href="https://www.chrc-ccdp.gc.ca" target="_blank" rel="noopener" style="color:var(--greend);font-weight:700">Canadian Human Rights Commission</a>.</div>';
   h+='</div>';
