@@ -41,7 +41,7 @@ async function recordCheck(checkName, ok, errorMsg) {
 
   let alertSent = prev?.last_alert_sent || null;
   if (shouldAlert) {
-    const subject = ok ? `✅ TIJobs OK: ${checkName}` : `⚠️ TIJobs ${alertReason}: ${checkName}`;
+    const subject = ok ? `✅ YouthHire OK: ${checkName}` : `⚠️ YouthHire ${alertReason}: ${checkName}`;
     const body = ok
       ? `Check "${checkName}" recovered at ${now.toISOString().substring(11,19)} UTC.`
       : `${errorMsg} (fail #${consecutive})`;

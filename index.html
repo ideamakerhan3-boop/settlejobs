@@ -115,9 +115,18 @@ img{display:block;max-width:100%}
 
 /* ═══ NAV ═══ */
 #site-nav{background:var(--white);border-bottom:1.5px solid var(--border);height:var(--nav-h);padding:0 4%;display:flex;align-items:center;justify-content:space-between;position:fixed;top:0;left:0;right:0;z-index:900;box-shadow:0 1px 8px rgba(0,0,0,.05)}
-.nav-logo{font-family:'Playfair Display',serif;font-size:19px;font-weight:900;cursor:pointer;display:flex;align-items:center;gap:8px;flex-shrink:0;letter-spacing:-.02em}
-.nav-logo-maple{font-size:20px;line-height:1}
-.nav-logo .c{color:var(--red)}.nav-logo .j{color:var(--muted);font-weight:700}
+
+/* ═══ BRAND LOGO (commercial-grade wordmark + mark) ═══ */
+.yh-logo{display:inline-flex;align-items:center;gap:9px;cursor:pointer;user-select:none;line-height:1;font-family:'Plus Jakarta Sans',system-ui,sans-serif;font-weight:800;letter-spacing:-.035em;flex-shrink:0;outline:none;border:none;background:transparent;padding:0}
+.yh-logo:focus-visible{outline:2px solid var(--red);outline-offset:4px;border-radius:6px}
+.yh-logo-mark{width:26px;height:26px;flex-shrink:0;display:block}
+.yh-logo-text{font-size:19px;color:var(--ink);white-space:nowrap}
+.yh-logo-text em{font-style:normal;color:var(--red)}
+.yh-logo-dark .yh-logo-text{color:#fff}
+
+/* legacy class bridge (kept for any missed HTML) */
+.nav-logo{font-family:'Plus Jakarta Sans',system-ui,sans-serif;font-size:19px;font-weight:800;cursor:pointer;display:flex;align-items:center;gap:9px;flex-shrink:0;letter-spacing:-.035em}
+.nav-logo .c{color:var(--red)}.nav-logo .j{color:var(--ink);font-weight:800}
 .nav-center{display:flex;gap:2px;flex:1;justify-content:center}
 .nav-link{font-size:13.5px;font-weight:600;color:var(--gray);padding:7px 13px;border-radius:8px;cursor:pointer;transition:all .15s;border:none;background:none;letter-spacing:-.01em}
 .nav-link:hover,.nav-link.active{color:var(--ink);background:var(--bg)}
@@ -134,8 +143,6 @@ img{display:block;max-width:100%}
   #nav-hamburger{display:block}
   .nav-right .nav-btn-hide{display:none !important}
   #nav-guest .nav-btn-hide{display:none !important}
-  #prov-divider,#s-prov{display:none}
-  #mob-prov-row{display:block !important}
 }
 
 /* ═══ HERO ═══ */
@@ -3910,8 +3917,8 @@ function downloadProofPDF(jobId) {
     /* ── 공통 ── */
     '.page{max-width:640px;margin:0 auto;background:#fff;padding:40px 44px;min-height:100vh}' +
     '.page-break{page-break-after:always;border-top:3px dashed #e0e0e0;margin:40px 0 0;padding-top:4px}' +
-    '.logo{font-size:18px;font-weight:900;letter-spacing:-.02em;margin-bottom:4px}' +
-    '.logo .red{color:#2563EB}.logo .gray{color:#888;font-weight:700}' +
+    '.logo{font-size:19px;font-weight:800;letter-spacing:-.035em;margin-bottom:4px;font-family:-apple-system,"Segoe UI",sans-serif}' +
+    '.logo .red{color:#2563EB;font-weight:800}.logo .gray{color:#111;font-weight:800}' +
     '.badge{display:inline-block;font-size:11px;font-weight:700;padding:3px 12px;border-radius:100px;margin:8px 0 18px}' +
     '.badge-proof{background:#e8f5ee;color:#1a6b3e}' +
     '.badge-listing{background:#EFF6FF;color:#1e40af}' +
@@ -4071,7 +4078,7 @@ function downloadReceipt(invId, pkg, total, date, isRefund, refId, ref, cardLast
     'body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f5f5f2;min-height:100vh;padding:20px;font-size:16px;color:#111}' +
     '.card{background:#fff;border-radius:16px;max-width:480px;margin:0 auto;padding:32px 28px;box-shadow:0 4px 24px rgba(0,0,0,.10)}' +
     '.logo{font-size:22px;font-weight:900;margin-bottom:6px;letter-spacing:-.02em}' +
-    '.logo .red{color:#2563EB}' +
+    '.logo{font-family:-apple-system,"Segoe UI",sans-serif;font-weight:800;letter-spacing:-.035em}.logo .red{color:#2563EB;font-weight:800}.logo .gray{color:#111;font-weight:800}' +
     '.logo .gray{color:#888;font-weight:700}' +
     '.badge{display:inline-block;font-size:12px;font-weight:700;padding:4px 12px;border-radius:100px;margin-bottom:24px;margin-top:8px}' +
     '.inv-num{font-size:28px;font-weight:900;letter-spacing:-.02em;margin-bottom:4px}' +
@@ -6172,7 +6179,7 @@ function showFreeRegistrationModal(){
       '<h3 style="margin:0 0 12px;font-size:20px;color:#0F0F0F">🎉 Free Registration Period</h3>'+
       '<p style="margin:0 0 16px;font-size:14px;color:#0F0F0F;line-height:1.6">All job postings are free during our launch. Enter promo code <strong style="color:#2563EB;font-size:15px">FREE5</strong> on your account page to receive 5 free credits.</p>'+
       '<button id="free-reg-go-account" class="btn btn-primary" style="width:100%;margin-bottom:14px">Go to Account Page</button>'+
-      '<p style="margin:0;font-size:13px;color:#5A5A5A;line-height:1.5">Need more credits? Contact us at <a href="mailto:tijobs.ca@gmail.com" style="color:#2563EB;text-decoration:none">tijobs.ca@gmail.com</a>.</p>'+
+      '<p style="margin:0;font-size:13px;color:#5A5A5A;line-height:1.5">Need more credits? Contact us at <a href="mailto:hello@canadayouthhire.ca" style="color:#2563EB;text-decoration:none">hello@canadayouthhire.ca</a>.</p>'+
       '<button id="free-reg-close" style="position:absolute;top:10px;right:14px;background:none;border:none;font-size:22px;color:#919191;cursor:pointer" aria-label="Close">×</button>'+
     '</div>';
   // Reposition close button relative to modal box
@@ -6220,7 +6227,7 @@ function showLaunchEventModal(){
       '<p style="margin:0 0 20px;font-size:14px;color:#0F0F0F;line-height:1.6">Sign up now and get <strong style="color:#2563EB;font-size:16px">5 free credits</strong> added to your account instantly — ready to use immediately.</p>'+
       '<button id="launch-signup-btn" class="btn btn-primary" style="width:100%;margin-bottom:10px;font-size:15px;font-weight:700">Sign Up — Get 5 Free Credits</button>'+
       '<button id="launch-signin-btn" style="width:100%;margin-bottom:14px;padding:10px;background:none;border:1px solid #E2E2DC;border-radius:8px;color:#5A5A5A;cursor:pointer;font-family:inherit;font-size:13px">Already have an account? Sign in</button>'+
-      '<p style="margin:0;font-size:12px;color:#919191;line-height:1.5;text-align:center">Questions? <a href="mailto:tijobs.ca@gmail.com" style="color:#2563EB;text-decoration:none">tijobs.ca@gmail.com</a></p>'+
+      '<p style="margin:0;font-size:12px;color:#919191;line-height:1.5;text-align:center">Questions? <a href="mailto:hello@canadayouthhire.ca" style="color:#2563EB;text-decoration:none">hello@canadayouthhire.ca</a></p>'+
       '<button id="launch-close-btn" style="position:absolute;top:10px;right:14px;background:none;border:none;font-size:22px;color:#919191;cursor:pointer" aria-label="Close">×</button>'+
     '</div>';
   document.body.appendChild(overlay);
@@ -6719,9 +6726,13 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 
 <!-- ══ SITE NAV ══ -->
 <nav id="site-nav" role="navigation" aria-label="Main">
-  <div class="nav-logo" onclick="logoAdminTap();go('home')" tabindex="0" role="link" aria-label="YouthHire home">
-    <span class="nav-logo-maple"></span>
-    <span><span class="c">Youth</span><span class="j">Hire</span></span>
+  <div class="yh-logo" onclick="logoAdminTap();go('home')" tabindex="0" role="link" aria-label="YouthHire home">
+    <svg class="yh-logo-mark" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+      <rect x="1" y="1" width="30" height="30" rx="9" fill="#2563EB"/>
+      <path d="M10.5 9.5 L16 16 L21.5 9.5" stroke="#fff" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M16 16 L16 22.5" stroke="#fff" stroke-width="2.8" stroke-linecap="round"/>
+    </svg>
+    <span class="yh-logo-text">youth<em>hire</em></span>
   </div>
   <div class="nav-center"></div>
   <div class="nav-right">
@@ -6756,17 +6767,17 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 <!-- ══════════════════════════════════════════════════ -->
 <div id="page-home" class="page">
   <!-- Banner -->
-  <div class="hh-banner">🎉 <span>Grand Opening! Sign up today and get <strong>5 FREE</strong> job posting credits</span></div>
+  <div class="hh-banner"><span>🎉 Grand Opening — sign up today and get <strong>5 free</strong> posting credits</span></div>
 
   <!-- Youth Hero -->
   <section class="hh-hero">
     <div class="hh-hero-inner">
       <div class="hh-hero-eyebrow">
         <span class="hh-hero-eyebrow-dot"></span>
-        <span>Youth jobs across Canada</span>
+        <span>New jobs across Canada, daily</span>
       </div>
-      <h1 class="hh-hero-title">Your first job,<br>starts <em>here</em>.</h1>
-      <p class="hh-hero-sub">Student-friendly, part-time, and entry-level roles — built for the next generation of Canadian workers.</p>
+      <h1 class="hh-hero-title">Your first job<br>starts <em>here</em>.</h1>
+      <p class="hh-hero-sub">Part-time, summer, co-op, and first-job roles for students, new grads, and young Canadians.</p>
 
       <!-- Big Search -->
       <div class="hh-searchbig" role="search">
@@ -6844,9 +6855,9 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
   <div style="max-width:920px;margin:0 auto;padding:32px 4% 60px;box-sizing:border-box;width:100%;overflow-x:hidden">
     <button class="back-btn" onclick="go('home')">← Back to Jobs</button>
     <div style="text-align:center;margin-bottom:40px">
-      <div style="font-size:12px;font-weight:800;color:var(--red);text-transform:uppercase;letter-spacing:2px;margin-bottom:12px">Employer Platform</div>
-      <h1 style="font-family:'Playfair Display',serif;font-size:clamp(26px,4vw,40px);font-weight:900;letter-spacing:-.02em;margin-bottom:12px">Post Jobs. Reach Young Talent.</h1>
-      <p style="font-size:15px;color:var(--gray);max-width:500px;margin:0 auto;line-height:1.7">Connect with students, new grads, and young workers across Canada. Entry-level, part-time, and first-job friendly listings — LMIA-ready for employers hiring under-represented groups.</p>
+      <div style="font-size:12px;font-weight:800;color:var(--red);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:14px">For Employers</div>
+      <h1 style="font-family:'Plus Jakarta Sans',system-ui,sans-serif;font-size:clamp(30px,5vw,46px);font-weight:800;letter-spacing:-.035em;margin-bottom:14px;line-height:1.05">Hire your next young talent.</h1>
+      <p style="font-size:16px;color:var(--gray);max-width:520px;margin:0 auto;line-height:1.6;font-weight:500">Reach students, new grads, and entry-level job seekers across Canada. Simple posting, fair pricing, zero subscription.</p>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:0 0 28px">
       <div style="background:#fff;border:2px solid var(--border);border-radius:var(--r2);padding:20px 16px;text-align:center;cursor:pointer;transition:all .18s;display:flex;flex-direction:column;justify-content:space-between;box-sizing:border-box" onclick="go('register')" onmouseover="this.style.borderColor='var(--red)';this.style.boxShadow='0 4px 20px rgba(37,99,235,.1)'" onmouseout="this.style.borderColor='var(--border)';this.style.boxShadow='none'">
@@ -6888,14 +6899,14 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
   <div class="form-page">
     <button class="back-btn" onclick="goBack()">← Back</button>
     <div class="form-header">
-      <h1>Employer Sign Up</h1>
-      <p>This platform is for <strong>employers only</strong>. Create your account to post jobs.</p>
+      <h1>Create your employer account</h1>
+      <p>Post your first youth-friendly job in minutes. Free to create, pay only when you post.</p>
     </div>
 
-    <div style="background:var(--ink2);border-radius:12px;padding:14px 18px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;gap:12px">
+    <div style="background:var(--redl);border:1.5px solid rgba(37,99,235,.18);border-radius:12px;padding:14px 18px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;gap:12px">
       <div>
-        <div style="font-size:13px;font-weight:800;color:#fff;margin-bottom:2px">Already have an account?</div>
-        <div style="font-size:12px;color:rgba(255,255,255,.4)">Sign in to access your dashboard</div>
+        <div style="font-size:13px;font-weight:700;color:var(--ink);margin-bottom:2px">Already have an account?</div>
+        <div style="font-size:12px;color:var(--gray)">Sign in to manage your postings</div>
       </div>
       <button class="btn btn-primary btn-sm" onclick="go('login')" style="flex-shrink:0">Sign In →</button>
     </div>
@@ -6961,8 +6972,8 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
   <div class="form-page">
     <button class="back-btn" onclick="goBack()">← Back</button>
     <div class="form-header">
-      <h1>Sign In</h1>
-      <p>Welcome back to YouthHire.</p>
+      <h1>Welcome back</h1>
+      <p>Sign in to post jobs and manage your listings.</p>
     </div>
     <div class="fg">
       <label for="l-email">Email <span class="req">*</span></label>
@@ -7305,8 +7316,8 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
   <div class="pkg-page">
     <button class="back-btn" onclick="goBack()">← Back</button>
     <div class="pkg-page-head">
-      <h1>Simple, Transparent Pricing</h1>
-      <p>Pay once per posting — no subscriptions, no hidden fees. Credits never expire.</p>
+      <h1>Pay once. Post forever.</h1>
+      <p>No subscriptions, no hidden fees. Credits never expire — use them whenever you need to hire.</p>
     </div>
     <div class="guarantee-strip">
       <div class="guarantee-strip-ico">🛡</div>
@@ -7413,7 +7424,7 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
     <div id="interac-fields" style="display:none">
       <div style="background:var(--bg);border:1.5px solid var(--border);border-radius:var(--r2);padding:20px;font-size:13px;color:var(--gray);line-height:1.7">
         <strong style="color:var(--ink);display:block;margin-bottom:8px">Interac e-Transfer Instructions</strong>
-        Send payment to: <strong><a href="mailto:tijobs.ops@gmail.com" style="color:inherit">tijobs.ops@gmail.com</a></strong><br>
+        Send payment to: <strong><a href="mailto:payments@canadayouthhire.ca" style="color:inherit">payments@canadayouthhire.ca</a></strong><br>
         Include your company name in the memo.<br>
         Your listing will be activated within 1 business day of receipt.
       </div>
@@ -8500,7 +8511,7 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
     <h2>8. Cookies</h2>
     <p>We use only essential session cookies. No tracking or advertising cookies are used.</p>
     <h2>9. Contact</h2>
-    <p>Privacy inquiries: <strong><a href="mailto:tijobs.ca@gmail.com" style="color:inherit">tijobs.ca@gmail.com</a></strong>. We respond within 30 days as required by PIPEDA.</p>
+    <p>Privacy inquiries: <strong><a href="mailto:hello@canadayouthhire.ca" style="color:inherit">hello@canadayouthhire.ca</a></strong>. We respond within 30 days as required by PIPEDA.</p>
   </div>
 </div>
 
@@ -8536,7 +8547,7 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
     <h2>6. Governing Law</h2>
     <p>These Terms are governed by Canadian law and the laws of the province in which the employer is registered.</p>
     <h2>7. Contact</h2>
-    <p>Legal inquiries: <strong><a href="mailto:tijobs.ca@gmail.com" style="color:inherit">tijobs.ca@gmail.com</a></strong></p>
+    <p>Legal inquiries: <strong><a href="mailto:hello@canadayouthhire.ca" style="color:inherit">hello@canadayouthhire.ca</a></strong></p>
   </div>
 </div>
 
@@ -8810,9 +8821,13 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 
     <!-- Hero -->
     <div style="text-align:center;padding:44px 0 36px">
-      <div style="font-size:56px;margin-bottom:14px"></div>
-      <h1 style="font-family:'Playfair Display',serif;font-size:clamp(26px,4vw,38px);font-weight:900;letter-spacing:-.02em;margin-bottom:14px">YouthHire</h1>
-      <p style="font-size:15px;color:var(--gray);max-width:480px;margin:0 auto;line-height:1.8">Canada's youth employment platform — connecting students, new grads, and young workers with employers hiring for entry-level, part-time, and first-job roles.</p>
+      <svg viewBox="0 0 32 32" fill="none" aria-hidden="true" style="width:48px;height:48px;margin:0 auto 18px;display:block">
+        <rect x="1" y="1" width="30" height="30" rx="9" fill="#2563EB"/>
+        <path d="M10.5 9.5 L16 16 L21.5 9.5" stroke="#fff" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M16 16 L16 22.5" stroke="#fff" stroke-width="2.8" stroke-linecap="round"/>
+      </svg>
+      <h1 style="font-family:'Plus Jakarta Sans',system-ui,sans-serif;font-size:clamp(30px,5vw,44px);font-weight:800;letter-spacing:-.035em;margin-bottom:14px;line-height:1.05">About YouthHire</h1>
+      <p style="font-size:15.5px;color:var(--gray);max-width:500px;margin:0 auto;line-height:1.7;font-weight:500">Canada's youth employment platform — connecting students, new grads, and young workers with employers hiring for entry-level, part-time, and first-job roles.</p>
     </div>
 
     <!-- 메시지: Young Workforce -->
@@ -8857,8 +8872,8 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
   <div class="form-page" style="max-width:560px">
     <button class="back-btn" onclick="goBack()">← Back</button>
     <div class="form-header">
-      <h1>Contact Support</h1>
-      <p>Have a question or issue? Send us a message and we'll get back to you within 1 business day.</p>
+      <h1>Get in touch</h1>
+      <p>Questions, feedback, or partnership ideas? Drop us a line — we reply within 1 business day.</p>
     </div>
     <div class="fg">
       <label for="cs-name">Your Name <span class="req">*</span></label>
@@ -8888,7 +8903,7 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
     <button class="btn btn-primary btn-full btn-lg" onclick="submitContact()">Send Message</button>
     <div style="margin-top:28px;background:var(--bg);border-radius:var(--r2);padding:18px 20px;font-size:13px;color:var(--gray);line-height:1.8">
       <strong style="display:block;color:var(--ink);margin-bottom:6px">📬 Other ways to reach us</strong>
-      Email: <strong><a href="mailto:tijobs.ca@gmail.com" style="color:inherit">tijobs.ca@gmail.com</a></strong><br>
+      Email: <strong><a href="mailto:hello@canadayouthhire.ca" style="color:inherit">hello@canadayouthhire.ca</a></strong><br>
       Response time: Within 1 business day<br>
       Hours: Mon–Fri, 9am–5pm ET
     </div>
@@ -8898,7 +8913,14 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 <footer id="site-footer" role="contentinfo">
   <div class="footer-top">
     <div>
-      <div class="footer-brand" onclick="logoAdminTap()" style="cursor:pointer" title=""><span class="c">Youth</span>Hire </div>
+      <div class="yh-logo yh-logo-dark" onclick="logoAdminTap()" style="margin-bottom:12px" title="">
+        <svg class="yh-logo-mark" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+          <rect x="1" y="1" width="30" height="30" rx="9" fill="#2563EB"/>
+          <path d="M10.5 9.5 L16 16 L21.5 9.5" stroke="#fff" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M16 16 L16 22.5" stroke="#fff" stroke-width="2.8" stroke-linecap="round"/>
+        </svg>
+        <span class="yh-logo-text" style="font-size:20px">youth<em style="color:#60A5FA">hire</em></span>
+      </div>
       <p class="footer-desc">Canada's youth job board — connecting students, new grads, and young workers with employers hiring for entry-level, part-time, and first-job opportunities.</p>
       <p class="footer-desc" style="font-size:11px;margin-top:6px;opacity:.7">Youth recruitment platform — supports LMIA under-represented group advertising (youth).</p>
     </div>
@@ -8922,7 +8944,14 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
     </div>
   </div>
   <div class="footer-mobile-links" style="display:none;flex-wrap:wrap;gap:4px 14px;margin-bottom:16px;align-items:center">
-    <div class="footer-brand" onclick="logoAdminTap()" style="cursor:pointer;width:100%;margin-bottom:6px"><span class="c">Youth</span>Hire </div>
+    <div class="yh-logo yh-logo-dark" onclick="logoAdminTap()" style="width:100%;margin-bottom:8px">
+      <svg class="yh-logo-mark" viewBox="0 0 32 32" fill="none" aria-hidden="true" style="width:22px;height:22px">
+        <rect x="1" y="1" width="30" height="30" rx="9" fill="#2563EB"/>
+        <path d="M10.5 9.5 L16 16 L21.5 9.5" stroke="#fff" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M16 16 L16 22.5" stroke="#fff" stroke-width="2.8" stroke-linecap="round"/>
+      </svg>
+      <span class="yh-logo-text" style="font-size:17px">youth<em style="color:#60A5FA">hire</em></span>
+    </div>
     <button onclick="go('post-flow')" style="font-size:12px;color:rgba(255,255,255,.45);background:none;border:none;cursor:pointer;padding:0;font-family:inherit">Post a Job</button> <span style="color:rgba(255,255,255,.2)">·</span> <button onclick="window._buyCreditsOnly=true;go('pricing')" style="font-size:12px;color:rgba(255,255,255,.45);background:none;border:none;cursor:pointer;padding:0;font-family:inherit">Pricing</button> <span style="color:rgba(255,255,255,.2)">·</span> <button onclick="_isLoggedIn?go('dashboard'):requireLogin('dashboard')" style="font-size:12px;color:rgba(255,255,255,.45);background:none;border:none;cursor:pointer;padding:0;font-family:inherit">Dashboard</button> <span style="color:rgba(255,255,255,.2)">·</span> <button onclick="go('about')" style="font-size:12px;color:rgba(255,255,255,.45);background:none;border:none;cursor:pointer;padding:0;font-family:inherit">About</button> <span style="color:rgba(255,255,255,.2)">·</span> <button onclick="go('contact')" style="font-size:12px;color:rgba(255,255,255,.45);background:none;border:none;cursor:pointer;padding:0;font-family:inherit">Contact</button> <span style="color:rgba(255,255,255,.2)">·</span> <button onclick="go('privacy')" style="font-size:12px;color:rgba(255,255,255,.45);background:none;border:none;cursor:pointer;padding:0;font-family:inherit">Privacy</button> <span style="color:rgba(255,255,255,.2)">·</span> <button onclick="go('terms')" style="font-size:12px;color:rgba(255,255,255,.45);background:none;border:none;cursor:pointer;padding:0;font-family:inherit">Terms</button> <span style="color:rgba(255,255,255,.2)">·</span>     <a href="https://www.chrc-ccdp.gc.ca" target="_blank" rel="noopener" style="font-size:12px;color:rgba(255,255,255,.45);text-decoration:none">CHRC ↗</a>
   </div>
   <div class="footer-bottom">

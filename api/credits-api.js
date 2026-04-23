@@ -171,7 +171,7 @@ export default async function handler(req, res) {
 
       if (dupErr) {
         // Duplicate — already redeemed
-        return res.status(400).json({ error: 'This promo code has already been used. For more credits, please contact tijobs.ca@gmail.com' });
+        return res.status(400).json({ error: 'This promo code has already been used. For more credits, please contact hello@canadayouthhire.ca' });
       }
 
       // Usage recorded — now add credits atomically

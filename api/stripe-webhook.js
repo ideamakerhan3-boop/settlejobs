@@ -12,7 +12,7 @@ const sb = createClient(
 export const config = { api: { bodyParser: false } };
 
 async function alertOrphanRefund(paymentIntentId, amount) {
-  const subject = 'TIJOBS REFUND ORPHAN';
+  const subject = 'YOUTHHIRE REFUND ORPHAN';
   const body = `Stripe refund received but no matching transaction. PI=${paymentIntentId} amount=${amount || '?'}. Manual review required.`;
   const voiceMsg = `YouthHire alert. A Stripe refund arrived but no matching transaction was found in the database. Manual review required immediately.`;
   await sendSmsAlert(subject, body);
