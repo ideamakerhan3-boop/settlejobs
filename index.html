@@ -1945,11 +1945,13 @@ function renderJobs(list, append) {
 
 
 // ═══ JOB DETAIL ═══
-function openJob(id) {
+async function openJob(id) {
   var j=null;
   for(var i=0;i<ALL_JOBS.length;i++){if(String(ALL_JOBS[i].id)===String(id)){j=ALL_JOBS[i];break;}}
   if(!j) return;
   if(j.src==='jobbank' && j.url){window.open(j.url,'_blank','noopener');return;}
+  // Public list omits apply_email to block bulk harvesting; fetch on click.
+  if(j._needsDetail){ try { await hydrateJobDetail(j); } catch(e) {} }
   var el=document.getElementById('detail-breadcrumb');
   if(el) el.textContent=j.title;
   var backBtn=document.getElementById('detail-back-btn');
@@ -6506,6 +6508,10 @@ function autoExpireJobs() {
 // Fetch all active jobs for the public home feed. Unauthenticated, cached
 // server-side for 60s. Fills JOBS, so anonymous visitors see listings
 // without needing to sign in.
+//
+// apply_email is intentionally NOT returned in the list payload to avoid
+// bulk email harvesting. Jobs with applyMethod=email get `_needsDetail:true`
+// and openJob() hydrates them via /api/job-detail on click.
 async function loadPublicJobs() {
   try {
     var r = await fetch('/api/list-jobs?limit=200', { method: 'GET', headers: { 'Accept': 'application/json' } });
@@ -6514,6 +6520,7 @@ async function loadPublicJobs() {
     if (!d || !Array.isArray(d.jobs)) return;
     d.jobs.forEach(function(dj){
       if (JOBS.some(function(j){ return String(j.id) === String(dj.job_id); })) return;
+      var applyMethod = dj.apply_method || 'email';
       JOBS.push({
         id: dj.job_id, title: dj.title, company: dj.company,
         loc: dj.loc || '', prov: dj.prov || '',
@@ -6526,11 +6533,10 @@ async function loadPublicJobs() {
         status: dj.status || 'active',
         date: dj.posted_date || '', exp: dj.exp_date || '',
         src: 'local', url: null,
-        applyMethod: dj.apply_method || 'email',
-        // Only expose apply_url publicly; apply_email stays server-side
-        // until the detail page loads (where job-page.js provides it).
+        applyMethod: applyMethod,
         email: '',
-        applyUrl: dj.apply_method === 'url' ? (dj.apply_url || '') : '',
+        applyUrl: applyMethod === 'url' ? (dj.apply_url || '') : '',
+        _needsDetail: applyMethod === 'email',
         lang: dj.lang || 'English', edu: dj.edu || 'None',
         expReq: dj.exp_req || 'No experience', vacancy: dj.vacancy || 'new',
         ai: dj.ai_use || 'no', remote: dj.remote || 'onsite',
@@ -6543,6 +6549,26 @@ async function loadPublicJobs() {
     if (curPage === 'home') { try { doSearch(); } catch(e) {} }
   } catch (e) {
     console.error('loadPublicJobs error:', e);
+  }
+}
+
+// Hydrate a list-fetched job with apply_email on demand. Called from openJob
+// before the first render when j._needsDetail is true. Rate-limited server-side
+// so scrapers can't batch-harvest emails via this endpoint.
+async function hydrateJobDetail(j) {
+  if (!j || !j._needsDetail || !j.id) return;
+  try {
+    var r = await fetch('/api/job-detail?id=' + encodeURIComponent(j.id), { method: 'GET', headers: { 'Accept': 'application/json' } });
+    if (!r.ok) { j._needsDetail = false; return; }
+    var d = await r.json().catch(function(){ return null; });
+    if (d && d.job) {
+      if (d.job.apply_email && j.applyMethod === 'email') j.email = d.job.apply_email;
+      if (d.job.apply_url && j.applyMethod === 'url' && !j.applyUrl) j.applyUrl = d.job.apply_url;
+    }
+  } catch (e) {
+    console.error('hydrateJobDetail error:', e);
+  } finally {
+    j._needsDetail = false;
   }
 }
 
@@ -7515,23 +7541,23 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
       <h2 style="font-size:20px;font-weight:900;letter-spacing:-.02em;margin-bottom:14px;text-align:center">Before you buy</h2>
       <div style="display:flex;flex-direction:column;gap:8px">
         <details style="background:#FFFFFF;border:1.5px solid var(--border);border-radius:var(--r2);padding:16px 20px">
-          <summary style="font-size:14px;font-weight:700;cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center">Do credits expire?<span style="color:var(--muted);font-weight:400">+</span></summary>
+          <summary style="font-size:14px;font-weight:700;cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center;min-height:36px;padding:4px 0">Do credits expire?<span style="color:var(--muted);font-weight:400">+</span></summary>
           <p style="font-size:13px;color:var(--gray);line-height:1.75;margin-top:10px">No. Once you buy credits they stay on your account until you use them. Each individual posting runs 60 days from the date you publish it.</p>
         </details>
         <details style="background:#FFFFFF;border:1.5px solid var(--border);border-radius:var(--r2);padding:16px 20px">
-          <summary style="font-size:14px;font-weight:700;cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center">How long does each posting stay live?<span style="color:var(--muted);font-weight:400">+</span></summary>
+          <summary style="font-size:14px;font-weight:700;cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center;min-height:36px;padding:4px 0">How long does each posting stay live?<span style="color:var(--muted);font-weight:400">+</span></summary>
           <p style="font-size:13px;color:var(--gray);line-height:1.75;margin-top:10px">60 days from publish. We send a reminder email 7 days before expiry so you can renew it (using another credit) or let it close. Expired postings can be relisted at any time.</p>
         </details>
         <details style="background:#FFFFFF;border:1.5px solid var(--border);border-radius:var(--r2);padding:16px 20px">
-          <summary style="font-size:14px;font-weight:700;cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center">Can I get a refund?<span style="color:var(--muted);font-weight:400">+</span></summary>
+          <summary style="font-size:14px;font-weight:700;cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center;min-height:36px;padding:4px 0">Can I get a refund?<span style="color:var(--muted);font-weight:400">+</span></summary>
           <p style="font-size:13px;color:var(--gray);line-height:1.75;margin-top:10px">Yes — we offer a 15-day Satisfaction Guarantee on unused credits. If your posting doesn't go live as described due to a platform issue, contact support for a full refund within 15 days of purchase.</p>
         </details>
         <details style="background:#FFFFFF;border:1.5px solid var(--border);border-radius:var(--r2);padding:16px 20px">
-          <summary style="font-size:14px;font-weight:700;cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center">Are GST / HST / PST taxes included?<span style="color:var(--muted);font-weight:400">+</span></summary>
+          <summary style="font-size:14px;font-weight:700;cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center;min-height:36px;padding:4px 0">Are GST / HST / PST taxes included?<span style="color:var(--muted);font-weight:400">+</span></summary>
           <p style="font-size:13px;color:var(--gray);line-height:1.75;margin-top:10px">Listed prices are base prices in CAD. Applicable GST/HST/PST is calculated at checkout based on your billing province and shown on your receipt.</p>
         </details>
         <details style="background:#FFFFFF;border:1.5px solid var(--border);border-radius:var(--r2);padding:16px 20px">
-          <summary style="font-size:14px;font-weight:700;cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center">Can I buy more credits later?<span style="color:var(--muted);font-weight:400">+</span></summary>
+          <summary style="font-size:14px;font-weight:700;cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center;min-height:36px;padding:4px 0">Can I buy more credits later?<span style="color:var(--muted);font-weight:400">+</span></summary>
           <p style="font-size:13px;color:var(--gray);line-height:1.75;margin-top:10px">Yes. You can buy additional credits from your dashboard at any time — they'll stack on top of your existing balance. Bulk packs give a better per-post rate, so hiring teams often buy a 10- or 30-pack upfront.</p>
         </details>
       </div>
@@ -7610,7 +7636,7 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
             <div class="dash-credits-num" id="dash-credits">7</div>
             <div class="dash-credits-lbl">Credits left</div>
           </div>
-          <button class="btn btn-green btn-sm" onclick="window._buyCreditsOnly=true;go('pricing')" style="font-size:11px">Buy more</button>
+          <button class="btn btn-green btn-sm" onclick="window._buyCreditsOnly=true;go('pricing')" style="font-size:12px;padding:8px 12px;min-height:34px">Buy more</button>
         </div>
       </div>
       <nav class="dash-nav">
@@ -7650,7 +7676,7 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
       <!-- LISTINGS TAB -->
       <div class="dash-tab-content on" id="dtab-listings">
         <div style="margin-bottom:6px">
-          <button onclick="go('home')" style="background:none;border:none;color:var(--muted);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:4px;padding:0">← Browse Jobs</button>
+          <button onclick="go('home')" style="background:none;border:none;color:var(--muted);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:4px;padding:8px 4px;min-height:32px">← Browse Jobs</button>
         </div>
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px">
           <h2 style="margin:0">My Listings</h2>
@@ -7659,7 +7685,7 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
         <div class="stat-cards">
           <div class="stat-c"><div class="stat-c-num" id="ds-active">0</div><div class="stat-c-lbl">Active</div></div>
           <div class="stat-c"><div class="stat-c-num" id="ds-total">0</div><div class="stat-c-lbl">Total Posted</div></div>
-          <div class="stat-c"><div class="stat-c-num" id="ds-credits">7</div><div class="stat-c-lbl">Credits Remaining</div><div class="stat-c-trend"><button onclick="window._buyCreditsOnly=true;go('pricing')" style="background:none;border:none;color:var(--blue);font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;text-decoration:underline">Buy more →</button></div></div>
+          <div class="stat-c"><div class="stat-c-num" id="ds-credits">7</div><div class="stat-c-lbl">Credits Remaining</div><div class="stat-c-trend"><button onclick="window._buyCreditsOnly=true;go('pricing')" style="background:none;border:none;color:var(--blue);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;text-decoration:underline;padding:6px 4px;min-height:32px">Buy more →</button></div></div>
         </div>
         <div class="tbl-container" style="overflow-x:auto">
           <table aria-label="Your job listings">
