@@ -13,7 +13,8 @@
     { "source": "/post-job", "destination": "/index.html" },
     { "source": "/post-flow", "destination": "/index.html" },
     { "source": "/checkout", "destination": "/index.html" },
-    { "source": "/admin", "destination": "/index.html" },
+    { "source": "/admin", "destination": "/admin.html" },
+    { "source": "/admin/(.*)", "destination": "/admin.html" },
     { "source": "/forgot", "destination": "/index.html" },
     { "source": "/home", "destination": "/index.html" },
     { "source": "/jobs/:id", "destination": "/api/job-page?id=:id" }

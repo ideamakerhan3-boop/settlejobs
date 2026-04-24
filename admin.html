@@ -2,32 +2,21 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<script>
+(function(){
+  try {
+    var ok = localStorage.getItem('cjb_is_admin') === '1'
+          && localStorage.getItem('cjb_logged_in') === '1';
+    if (!ok) { window.location.replace('/'); }
+  } catch(e) { window.location.replace('/'); }
+})();
+</script>
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="description" content="Canada's youth job board. Connecting students, new grads, and young workers with employers hiring for entry-level, part-time, and first-job opportunities.">
 <meta name="theme-color" content="#2563EB">
-<link rel="canonical" href="https://www.canadayouthhire.ca/">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="/favicon.svg">
-<link rel="manifest" href="/site.webmanifest">
-<!-- Open Graph -->
-<meta property="og:type" content="website">
-<meta property="og:site_name" content="YouthHire">
-<meta property="og:title" content="YouthHire — Youth Jobs in Canada">
-<meta property="og:description" content="Canada's youth job board. Connecting students, new grads, and young workers with employers hiring for entry-level, part-time, and first-job opportunities.">
-<meta property="og:url" content="https://www.canadayouthhire.ca/">
-<meta property="og:locale" content="en_CA">
-<meta property="og:image" content="https://www.canadayouthhire.ca/og-image.png">
-<meta property="og:image:type" content="image/png">
-<meta property="og:image:width" content="1200">
-<meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="YouthHire — Your first job, starts here.">
-<!-- Twitter Card -->
-<meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="YouthHire — Youth Jobs in Canada">
-<meta name="twitter:description" content="Canada's youth job board. Connecting students, new grads, and young workers with employers hiring for entry-level, part-time, and first-job opportunities.">
-<meta name="twitter:image" content="https://www.canadayouthhire.ca/og-image.png">
-<!-- Additional SEO -->
-<meta name="robots" content="index, follow">
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
 <meta name="geo.region" content="CA">
 <meta name="geo.placename" content="Canada">
 <title>YouthHire — Youth Jobs in Canada</title>
@@ -151,6 +140,17 @@ button,input,select,textarea{font-family:'Plus Jakarta Sans',system-ui,sans-seri
 img{display:block;max-width:100%}
 .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap}
 
+.admin-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:1100;align-items:center;justify-content:center;padding:20px}
+.admin-modal.open{display:flex}
+.admin-modal-box{background:#1A1A1A;border:1px solid rgba(255,255,255,.1);border-radius:16px;width:100%;max-width:480px;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 24px 64px rgba(0,0,0,.6)}
+.admin-modal-hd{display:flex;align-items:center;justify-content:space-between;padding:20px 24px 16px;border-bottom:1px solid rgba(255,255,255,.07)}
+.admin-modal-close{background:none;border:none;color:rgba(255,255,255,.4);font-size:18px;cursor:pointer;padding:4px;line-height:1;border-radius:6px}
+.admin-modal-close:hover{color:#fff;background:rgba(255,255,255,.08)}
+.admin-modal-body{padding:20px 24px;overflow-y:auto;flex:1}
+.admin-modal-ft{padding:16px 24px;border-top:1px solid rgba(255,255,255,.07);display:flex;gap:8px;flex-wrap:wrap}
+.amrow{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.05);gap:12px}
+.amlabel{font-size:11px;font-weight:700;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:.5px;flex-shrink:0}
+.amval{font-size:13px;color:rgba(255,255,255,.8);text-align:right}
 
 /* ═══ PAGE ROUTER ═══ */
 .page{display:none!important;overflow-x:hidden;word-break:break-word}
@@ -570,6 +570,76 @@ select.fc{-webkit-appearance:none;appearance:none;background:#fff url("data:imag
   .dash-tab-content h2{font-size:18px}
 }
 
+/* ═══ ADMIN ═══ */
+.admin-wrap{background:#0A0A0A;min-height:100vh;color:rgba(255,255,255,.85)}
+.admin-top{background:#000;border-bottom:1px solid rgba(255,255,255,.07);height:52px;display:flex;align-items:center;padding:0 12px;gap:8px;position:sticky;top:var(--nav-h);z-index:200}
+.admin-title{font-family:'Plus Jakarta Sans',system-ui,sans-serif;font-size:16px;font-weight:700;color:rgba(255,255,255,.8);flex-shrink:0;margin-right:4px}
+@media(max-width:700px){.admin-title{display:none}}
+.admin-nav-tabs{display:flex;gap:0;flex:1;flex-wrap:wrap}
+.admin-tab-btn{background:none;border:none;color:rgba(255,255,255,.35);font-size:12px;font-weight:700;padding:6px 10px;cursor:pointer;border-bottom:2px solid transparent;height:40px;display:flex;align-items:center;gap:4px;white-space:nowrap;transition:all .15s;letter-spacing:-.01em;flex-shrink:0}
+@media(max-width:700px){.admin-tab-btn{font-size:11px;padding:4px 8px;height:36px}}
+@media(max-width:700px){.admin-exit-full{display:none}.admin-exit-icon{display:inline!important}}
+.admin-tab-btn:hover{color:rgba(255,255,255,.65)}
+.admin-tab-btn.on{color:#fff;border-bottom-color:var(--red)}
+.admin-badge{font-size:9px;font-weight:800;padding:1px 5px;border-radius:100px;margin-left:2px}
+.admin-badge-red{background:rgba(239,68,68,.25);color:#F87171}
+.admin-badge-green{background:rgba(74,222,128,.15);color:#4ADE80}
+.admin-body-pad{padding:16px}@media(max-width:700px){.admin-body-pad{padding:10px 8px}}
+.admin-tab-pane{display:none}.admin-tab-pane.on{display:block}
+.admin-h2{font-family:'Plus Jakarta Sans',system-ui,sans-serif;font-size:20px;font-weight:800;color:#fff;margin-bottom:20px;letter-spacing:-.02em}
+.a-stat-row{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px;margin-bottom:14px}
+.a-stat{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:var(--r);padding:12px 14px;position:relative}
+.a-stat-link{cursor:pointer;transition:border-color .15s,background .15s}
+.a-stat-link:hover{border-color:rgba(255,255,255,.2);background:rgba(255,255,255,.07)}
+.a-stat-arrow{position:absolute;top:10px;right:12px;font-size:12px;color:rgba(255,255,255,.2)}
+.a-stat-link:hover .a-stat-arrow{color:rgba(255,255,255,.6)}
+.a-stat-n{font-family:'Plus Jakarta Sans',system-ui,sans-serif;font-size:26px;font-weight:900;color:#fff;letter-spacing:-.02em}
+.a-stat-l{font-size:9px;color:rgba(255,255,255,.3);font-weight:700;margin-top:2px;letter-spacing:.3px;text-transform:uppercase}
+.a-stat-trend{font-size:10px;font-weight:700;margin-top:4px}
+.a-tbl-wrap{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:var(--r2);overflow:auto;max-height:540px}
+.a-tbl-wrap thead th{position:sticky;top:0;background:#111;z-index:2}
+.a-tbl-wrap table{width:100%;border-collapse:collapse;font-size:13px}
+.a-tbl-wrap th{background:rgba(255,255,255,.04);padding:10px 14px;text-align:left;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.8px;color:rgba(255,255,255,.3);border-bottom:1px solid rgba(255,255,255,.07);white-space:nowrap}
+.a-tbl-wrap td{padding:12px 14px;border-bottom:1px solid rgba(255,255,255,.05);color:rgba(255,255,255,.75);vertical-align:middle}
+.a-tbl-wrap tr:last-child td{border-bottom:none}
+.a-tbl-wrap tr:hover td{background:rgba(255,255,255,.03)}
+.abadge{font-size:10px;font-weight:800;padding:3px 9px;border-radius:100px;display:inline-block;letter-spacing:.2px}
+.ab-green{background:rgba(74,222,128,.12);color:#4ADE80}
+.ab-red{background:rgba(248,113,113,.12);color:#F87171}
+.ab-amber{background:rgba(251,185,36,.12);color:#FBB924}
+.abtn{font-size:11.5px;font-weight:700;padding:5px 12px;border-radius:7px;border:none;cursor:pointer;font-family:inherit;transition:all .15s}
+.abtn-r{background:rgba(239,68,68,.12);color:#F87171;border:1px solid rgba(239,68,68,.18)}.abtn-r:hover{background:rgba(239,68,68,.22)}
+.abtn-g{background:rgba(74,222,128,.1);color:#4ADE80;border:1px solid rgba(74,222,128,.18)}.abtn-g:hover{background:rgba(74,222,128,.2)}
+.abtn-w{background:rgba(255,255,255,.06);color:rgba(255,255,255,.5);border:1px solid rgba(255,255,255,.1)}.abtn-w:hover{background:rgba(255,255,255,.1)}
+.abtn-b{background:rgba(96,165,250,.1);color:#60A5FA;border:1px solid rgba(96,165,250,.18)}.abtn-b:hover{background:rgba(96,165,250,.2)}
+.a-tbl-acts{display:flex;gap:5px;flex-wrap:wrap}
+.admin-filter-bar{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+.a-input{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:8px 14px;font-size:13px;color:rgba(255,255,255,.75);outline:none;font-family:inherit;transition:border .15s}
+.a-input:focus{border-color:rgba(255,255,255,.3)}
+.a-input::placeholder{color:rgba(255,255,255,.25)}
+.a-select{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:8px 32px 8px 14px;font-size:13px;color:rgba(255,255,255,.75);outline:none;font-family:inherit;-webkit-appearance:none;cursor:pointer}
+.a-select option{background:#1A1A1A;color:#fff}
+.admin-card{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:var(--r2);padding:14px}@media(max-width:700px){.admin-card{padding:10px}}
+.admin-two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:700px){.admin-two-col{grid-template-columns:1fr}}
+.rev-chart-wrap{height:120px;display:flex;align-items:flex-end;gap:6px;padding:0 4px}
+.rev-bar-c{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;height:100%;cursor:pointer}
+.rev-bar{width:100%;background:linear-gradient(180deg,#3B82F6,#2563EB);border-radius:3px 3px 0 0;min-height:3px;transition:opacity .15s}
+.rev-bar:hover{opacity:.75}
+.rev-lbl-row{display:flex;gap:6px;margin-top:6px}
+.rev-lbl{flex:1;text-align:center;font-size:9px;color:rgba(255,255,255,.25);font-weight:700;text-transform:uppercase}
+.act-row{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid rgba(255,255,255,.05)}
+.act-row:last-child{border:none}
+.act-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.act-txt{flex:1;font-size:13px;color:rgba(255,255,255,.6);line-height:1.5}
+.act-time{font-size:11px;color:rgba(255,255,255,.2);flex-shrink:0}
+.attn-item{display:flex;align-items:center;gap:12px;padding:11px 14px;border:1px solid rgba(255,255,255,.07);border-radius:9px;cursor:pointer;transition:background .15s;margin-bottom:7px}
+.attn-item:hover{background:rgba(255,255,255,.04)}
+.attn-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.attn-content{flex:1}
+.attn-title{font-size:13px;font-weight:700;color:#fff}
+.attn-sub{font-size:11px;color:rgba(255,255,255,.3);margin-top:1px}
+.attn-arrow{color:rgba(255,255,255,.2);font-size:16px}
 
 /* ═══ MODAL ═══ */
 .overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:1000;align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(4px);overflow-y:auto;-webkit-overflow-scrolling:touch}
@@ -614,6 +684,8 @@ select.fc{-webkit-appearance:none;appearance:none;background:#fff url("data:imag
 .footer-bottom{border-top:1px solid rgba(255,255,255,.07);padding-top:20px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
 .footer-legal{font-size:11px;color:rgba(255,255,255,.2);line-height:1.7}
 .footer-right{font-size:11px;color:rgba(255,255,255,.2);text-align:right}
+.admin-dot{display:inline-block;width:7px;height:7px;background:rgba(255,255,255,.1);border-radius:50%;cursor:pointer;transition:background .2s;vertical-align:middle;margin-left:4px}
+.admin-dot:hover{background:var(--red)}
 
 /* ═══ LEGAL PAGES ═══ */
 .legal-page{max-width:700px;margin:0 auto;padding:48px 4% 80px}
@@ -803,9 +875,17 @@ async function dbLogin(email, pw_hash) {
 async function dbGetAccount(email) {
   var em = (email||'').toLowerCase();
   var auth=_getAuthForCredits();
-  if(auth.email && auth.pw_hash && auth.email === em) {
-    var r = await _apiCall('/api/auth-api', {action:'get_profile', email:auth.email, pw_hash:auth.pw_hash});
-    if(r && !r.error) return r;
+  if(auth.email && auth.pw_hash) {
+    // Looking up self → use get_profile
+    if(auth.email === em) {
+      var r = await _apiCall('/api/auth-api', {action:'get_profile', email:auth.email, pw_hash:auth.pw_hash});
+      if(r && !r.error) return r;
+    }
+    // Looking up other user → needs admin; admin-api returns list, filter client-side
+    var ar = await _apiCall('/api/admin-api', {action:'list_accounts', email:auth.email, pw_hash:auth.pw_hash});
+    if(ar && !ar.error && ar.accounts) {
+      return ar.accounts.find(function(a){return (a.email||'').toLowerCase()===em;}) || null;
+    }
   }
   return null;
 }
@@ -834,6 +914,8 @@ function _getAuthForCredits() {
   em = (em||'').toLowerCase();
   // Use the pw_hash that belongs to THIS email, not some other account in memory
   var pw = (em && _ACCOUNTS[em] && _ACCOUNTS[em].pw) ? _ACCOUNTS[em].pw : null;
+  // Admin override: if current user IS the admin, _adminPwHash can be used
+  if(!pw && _adminPwHash && em && _ACCOUNTS[em] && _ACCOUNTS[em].is_admin) pw = _adminPwHash;
   return {email:em, pw_hash:pw};
 }
 async function dbGetCredits(email) {
@@ -882,14 +964,70 @@ async function dbGetJobs(email) {
     var r = await _apiCall('/api/auth-api', {action:'list_own_jobs', email:auth.email, pw_hash:auth.pw_hash});
     if(r && !r.error) return r.jobs || [];
   }
+  // Admin fetching someone else's jobs
+  if(_isAdminUser) {
+    var ar = await _apiCall('/api/admin-api', {action:'list_all_jobs', email:auth.email, pw_hash:auth.pw_hash});
+    if(ar && !ar.error && ar.jobs) {
+      return ar.jobs.filter(function(j){return (j.email||'').toLowerCase()===(email||'').toLowerCase();});
+    }
+  }
   return [];
 }
-// Update single job's status (user for own jobs)
+// Update single job's status (user for own jobs, admin for any)
 async function dbUpdateJobStatus(job_id, status) {
   var auth=_getAuthForCredits();
   if(!auth.email || !auth.pw_hash) return;
-  await _apiCall('/api/auth-api', {action:'update_job', email:auth.email, pw_hash:auth.pw_hash, job_id:String(job_id), patch:{status:status}});
+  if(_isAdminUser) {
+    await _apiCall('/api/admin-api', {action:'update_job_status', email:auth.email, pw_hash:auth.pw_hash, job_id:String(job_id), status:status});
+  } else {
+    await _apiCall('/api/auth-api', {action:'update_job', email:auth.email, pw_hash:auth.pw_hash, job_id:String(job_id), patch:{status:status}});
+  }
 }
+async function dbSaveIssueJob(iss) {
+  var auth=_getAuthForCredits();
+  if(!auth.email || !auth.pw_hash) return;
+  var payload = {
+    id: String(iss.id), job_id: String(iss.jobId),
+    job_title: iss.jobTitle||'', company: iss.company||'',
+    issue_type: iss.issueType||'quality', note: iss.note||'',
+    status: iss.status||'pending'
+  };
+  await _apiCall('/api/admin-api', {action:'upsert_issue_job', email:auth.email, pw_hash:auth.pw_hash, issue:payload});
+}
+async function dbGetIssueJobs() {
+  var auth=_getAuthForCredits();
+  if(!auth.email || !auth.pw_hash) return [];
+  var r = await _apiCall('/api/admin-api', {action:'list_issue_jobs', email:auth.email, pw_hash:auth.pw_hash});
+  return (r && r.issue_jobs) || [];
+}
+async function dbUpdateIssueStatus(id, status) {
+  var auth=_getAuthForCredits();
+  if(!auth.email || !auth.pw_hash) return;
+  await _apiCall('/api/admin-api', {action:'update_issue_job_status', email:auth.email, pw_hash:auth.pw_hash, id:String(id), status:status});
+}
+// ── Admin API helpers (require is_admin account) ──
+async function _adminApi(body) {
+  var auth=_getAuthForCredits();
+  if(!auth.email || !auth.pw_hash) return {error:'not authenticated'};
+  body.email = auth.email;
+  body.pw_hash = auth.pw_hash;
+  return await _apiCall('/api/admin-api', body);
+}
+async function adminListAccounts()      { var r=await _adminApi({action:'list_accounts'});      return (r&&r.accounts)||[]; }
+async function adminListTransactions()  { var r=await _adminApi({action:'list_transactions'});  return (r&&r.transactions)||[]; }
+async function adminListAllJobs()       { var r=await _adminApi({action:'list_all_jobs'});      return (r&&r.jobs)||[]; }
+async function adminListCredits()       { var r=await _adminApi({action:'list_credits'});       return (r&&r.credits)||[]; }
+async function adminListPromos()        { var r=await _adminApi({action:'list_promos'});        return (r&&r.promos)||[]; }
+async function adminInsertTransaction(tx)                   { return await _adminApi({action:'insert_transaction', tx:tx}); }
+async function adminUpdateTxnStatus(args)                   { return await _adminApi(Object.assign({action:'update_transaction_status'}, args)); }
+async function adminUpdateJobStatus(job_id, status)         { return await _adminApi({action:'update_job_status', job_id:String(job_id), status:status}); }
+async function adminGetSettings()                           { var r=await _adminApi({action:'get_settings'}); return (r&&r.settings)||null; }
+async function adminUpsertSettings(settings)                { return await _adminApi({action:'upsert_settings', settings:settings}); }
+async function adminCreatePromo(promo)                      { return await _adminApi({action:'create_promo', promo:promo}); }
+async function adminTogglePromo(id, is_active)              { return await _adminApi({action:'toggle_promo', id:id, is_active:is_active}); }
+async function adminUpdatePromoCredits(id, free_credits)    { return await _adminApi({action:'update_promo_credits', id:id, free_credits:free_credits}); }
+async function adminDeleteAccount(target_email)             { return await _adminApi({action:'delete_account', target_email:target_email}); }
+async function adminSetAccountStatus(target_email, status)  { return await _adminApi({action:'set_account_status', target_email:target_email, status:status}); }
 
 // ═══════════════════════════════════════════════════════════
 // DATA
@@ -1083,6 +1221,138 @@ function _jobIcon(cat) {
   return icons[cat] || '💼';
 }
 
+function importJobBankCSV() {
+  var fileInput = document.getElementById('jb-csv-file');
+  var statusEl = document.getElementById('jb-csv-status');
+  if (!fileInput || !fileInput.files || !fileInput.files[0]) {
+    showToast('⚠️ Please select a CSV file first.','warn'); return;
+  }
+  var file = fileInput.files[0];
+  if (!file.name.toLowerCase().endsWith('.csv')) {
+    showToast('⚠️ Please select a .csv file.','warn'); return;
+  }
+  statusEl.style.display = 'block';
+  statusEl.innerHTML = '<span style="color:var(--accent)">Parsing CSV... please wait.</span>';
+
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      var text = e.target.result;
+      var lines = text.split('\n');
+      if (lines.length < 2) { statusEl.innerHTML = '<span style="color:#F87171">CSV is empty.</span>'; return; }
+
+      // 헤더 파싱
+      var headers = _parseCSVLine(lines[0]);
+      var idx = {};
+      headers.forEach(function(h, i) { idx[h.replace(/"/g,'').trim()] = i; });
+
+      // 필수 컬럼 확인
+      var titleCol = idx['Job Title'] !== undefined ? idx['Job Title'] : idx['Original Job Title'];
+      if (titleCol === undefined) { statusEl.innerHTML = '<span style="color:#F87171">CSV format error: "Job Title" column not found.</span>'; return; }
+
+      var mn = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      var imported = [];
+      var skipped = 0;
+
+      for (var i = 1; i < lines.length; i++) {
+        if (!lines[i].trim()) continue;
+        var row = _parseCSVLine(lines[i]);
+        var title = row[titleCol] || '';
+        if (!title || title === 'NA') { skipped++; continue; }
+
+        var city = (row[idx['City']] || 'Canada').replace(/^"|"$/g,'');
+        var prov = _mapProvince((row[idx['Province/Territory']] || '').replace(/^"|"$/g,''));
+        var empType = (row[idx['Employment Type']] || 'Full-Time').replace(/^"|"$/g,'');
+        if (empType === 'NA') empType = 'Full-Time';
+        var nocName = (row[idx['NOC21 Code Name']] || row[idx['NOC 2016 Code Name']] || '').replace(/^"|"$/g,'');
+        var cat = _mapCategory(nocName);
+        var salMin = row[idx['Salary Minimum']] || '';
+        var salMax = row[idx['Salary Maximum']] || '';
+        var salPer = row[idx['Salary Per']] || '';
+        var salary = _formatSalary(salMin, salMax, salPer);
+        var salNum = salMax && salMax !== 'NA' ? parseFloat(salMax) : (salMin && salMin !== 'NA' ? parseFloat(salMin) : 0);
+
+        var postDateRaw = (row[idx['First Posting Date']] || '').replace(/^"|"$/g,'');
+        var postDate = '';
+        if (postDateRaw && postDateRaw !== 'NA') {
+          var pd = new Date(postDateRaw);
+          if (!isNaN(pd.getTime())) postDate = mn[pd.getMonth()] + ' ' + pd.getDate() + ', ' + pd.getFullYear();
+        }
+        if (!postDate) { var td = new Date(); postDate = mn[td.getMonth()] + ' ' + td.getDate() + ', ' + td.getFullYear(); }
+
+        // 만료일 = 게시일 + 60일
+        var expD = new Date(postDateRaw && postDateRaw !== 'NA' ? postDateRaw : new Date());
+        expD.setDate(expD.getDate() + 60);
+        var expDate = mn[expD.getMonth()] + ' ' + expD.getDate() + ', ' + expD.getFullYear();
+
+        // 이미 만료된 공고 스킵
+        if (expD < new Date()) { skipped++; continue; }
+
+        var vacancy = row[idx['Vacancy Count']] || '1';
+        if (vacancy === 'NA') vacancy = '1';
+        var telework = row[idx['Employment Term Telework']] || '';
+
+        var job = {
+          id: 'jb-' + i,
+          title: title.replace(/^"|"$/g,''),
+          company: 'Via Job Bank',
+          icon: _jobIcon(cat),
+          loc: (city !== 'NA' ? city : 'Canada') + ', ' + (prov.length > 20 ? prov.substring(0,2).toUpperCase() : prov),
+          prov: prov,
+          type: empType.indexOf('ull') >= 0 ? 'Full-Time' : empType.indexOf('art') >= 0 ? 'Part-Time' : empType,
+          cat: cat,
+          date: postDate,
+          exp: expDate,
+          salary: salary,
+          salaryNum: salNum,
+          status: 'active',
+          src: 'jobbank',
+          url: 'https://www.jobbank.gc.ca/jobsearch',
+          email: '',
+          desc: (nocName && nocName !== 'NA' ? nocName + '. ' : '') + 'Vacancy: ' + vacancy + (telework === '1' ? ' | Remote/Telework available' : '') + '.',
+          req: [],
+          ben: [],
+          vacancy: vacancy
+        };
+        imported.push(job);
+      }
+
+      JOBBANK_JOBS = imported;
+      ALL_JOBS = JOBS.concat(JOBBANK_JOBS);
+      var countEl = document.getElementById('jb-count');
+      if (countEl) countEl.textContent = imported.length;
+
+      // Supabase에 저장 (향후 재로드용) via admin-api
+      adminUpsertSettings({
+        key: 'jobbank_jobs', value: { count: imported.length, updated: new Date().toISOString() },
+        updated_at: new Date().toISOString()
+      }).catch(function(){});
+
+      // localStorage에 캐시 (빠른 로드)
+      try { localStorage.setItem('jb_jobs', JSON.stringify(imported)); } catch(e) {}
+
+      if (curPage === 'home') doSearch();
+      statusEl.innerHTML = '<span style="color:#34D399">✅ Imported <strong>' + imported.length + '</strong> job postings. Skipped ' + skipped + ' (expired/empty).</span>';
+      showToast('✅ Job Bank: ' + imported.length + ' postings imported','success');
+
+    } catch(err) {
+      statusEl.innerHTML = '<span style="color:#F87171">❌ Parse error: ' + err.message + '</span>';
+      console.error('CSV import error:', err);
+    }
+  };
+  reader.readAsText(file);
+}
+
+function clearJobBankJobs() {
+  if (!confirm('Clear all Job Bank postings?')) return;
+  JOBBANK_JOBS = [];
+  ALL_JOBS = JOBS.concat(JOBBANK_JOBS);
+  try { localStorage.removeItem('jb_jobs'); } catch(e) {}
+  var countEl = document.getElementById('jb-count');
+  if (countEl) countEl.textContent = '0';
+  if (curPage === 'home') doSearch();
+  showToast('Job Bank postings cleared.','');
+}
 
 // 아이콘 자동 매핑 (PowerShell에서 이모지 못 넣으므로)
 function _fixJobIcons(arr) {
@@ -1121,6 +1391,11 @@ function updateNavState() {
   if(mo) mo.style.display=_isLoggedIn?'':'none';
   if(md) md.style.display=_isLoggedIn?'':'none';
   if(mi) mi.style.display=_isLoggedIn?'':'none';
+  _updateAdminButton();
+}
+function _updateAdminButton() {
+  var box = document.getElementById('admin-shortcut-box');
+  if(box) box.style.display = _isAdminUser ? 'block' : 'none';
 }
 
 var _SEO_PAGES = {
@@ -1223,7 +1498,7 @@ function go(p, skipHistory) {
   _updateSEO(p);
 
   // Footer visibility
-  var noFooter = ['dashboard'];
+  var noFooter = ['dashboard','admin'];
   var footer = document.getElementById('site-footer');
   if (footer) footer.style.display = noFooter.indexOf(p)>=0?'none':'block';
 
@@ -1270,8 +1545,80 @@ function go(p, skipHistory) {
     return;
   }
   if (p==='admin') {
-    window.location.href = '/admin';
-    return;
+    if(!_isAdminUser || !_isLoggedIn){ showToast('Admin access required. Please login as admin.','warn'); go('home'); return; }
+    // DB에서 전체 데이터 로드 후 렌더링 — via admin-api (service key, RLS-safe)
+    Promise.all([adminListTransactions(), adminListAccounts()]).then(function(results) {
+      var txnRes = { data: results[0] };
+      var accRes = { data: results[1] };
+      // TXNS 완전 교체
+      var adminTxns = [];
+      // accounts에서 이메일→회사명 매핑 빌드
+      var emailToCompany = {};
+      if (accRes.data) {
+        accRes.data.forEach(function(a){ if(a.email && a.company) emailToCompany[a.email.toLowerCase()] = a.company; });
+      }
+      EMPLOYERS.forEach(function(e){ if(e.email && e.company) emailToCompany[e.email.toLowerCase()] = e.company; });
+
+      if (txnRes.data && txnRes.data.length > 0) {
+        var mn = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+        txnRes.data.forEach(function(row) {
+          var d = new Date(row.created_at);
+          var amt = parseFloat(row.amount || 0);
+          var txEmail = (row.email||'').toLowerCase();
+          var co = emailToCompany[txEmail] || row.email || '';
+          adminTxns.push({
+            id: row.id ? ('INV-' + String(row.id).padStart(5,'0')) : ('INV-' + String(Math.floor(Math.random()*90000)+10000)),
+            dbId: row.id,
+            email: row.email || '',
+            co: co,
+            pkg: row.pkg || 'single',
+            credits: row.credits || 1,
+            amt: amt,
+            sub: 'CA$' + amt.toFixed(2),
+            subNum: amt,
+            tax: '$0.00',
+            taxNum: 0,
+            tot: 'CA$' + amt.toFixed(2),
+            totNum: amt,
+            method: row.method || 'card',
+            status: row.status || 'paid',
+            date: mn[d.getMonth()] + ' ' + d.getDate() + ', ' + d.getFullYear() + ' ' + String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0'),
+            ref: row.ref || '',
+            note: row.note || '',
+            payment_intent: row.payment_intent || '',
+            usedCredits: 0,
+            freeCredits: (row.method==='free') ? (row.credits||0) : 0,
+            card_last4: row.card_last4 || null,
+            card_brand: row.card_brand || null,
+            refunded_at: row.refunded_at || null,
+            refundDate: row.refunded_at ? (function(){ var rd=new Date(row.refunded_at); var mn2=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']; return mn2[rd.getMonth()]+' '+rd.getDate()+', '+rd.getFullYear()+' '+String(rd.getHours()).padStart(2,'0')+':'+String(rd.getMinutes()).padStart(2,'0'); })() : ''
+          });
+        });
+      }
+      TXNS = adminTxns;
+      // EMPLOYERS DB에서 로드
+      if (accRes.data && accRes.data.length > 0) {
+        var mn2 = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+        accRes.data.forEach(function(row) {
+          var exists = EMPLOYERS.find(function(e){ return e.email.toLowerCase() === (row.email||'').toLowerCase(); });
+          if (!exists) {
+            var d2 = row.created_at ? new Date(row.created_at) : new Date();
+            var ds2 = mn2[d2.getMonth()] + ' ' + d2.getDate() + ', ' + d2.getFullYear();
+            EMPLOYERS.push({
+              company: row.company || row.email || '',
+              email: row.email || '',
+              prov: row.prov || '',
+              joined: ds2,
+              total: 0, active: 0,
+              status: row.status || 'active'
+            });
+          }
+        });
+      }
+      renderAdminJobs(); renderAdminEmployers(); renderAdminRevenue(); renderAdminOverview(); loadPromoCodes();
+    }).catch(function() {
+      renderAdminJobs(); renderAdminEmployers(); renderAdminRevenue(); renderAdminOverview(); loadPromoCodes();
+    });
   }
   if (p==='pricing') {
     // Default select triple
@@ -1685,6 +2032,7 @@ function openJob(id) {
 var _ACCOUNTS = {};
 
 // ── 프로모 코드 시스템 ──
+var PROMO_CODES = []; // 관리자용 캐시
 
 async function checkPromoCode() {
   // Pre-check disabled: anon can't read promo_codes after RLS lockdown.
@@ -1789,6 +2137,139 @@ async function applySettingsPromo() {
   }
 })();
 
+async function loadPromoCodes() {
+  try {
+    var list = await adminListPromos();
+    if(list && list.length) PROMO_CODES = list;
+  } catch(e) { console.error('loadPromoCodes:', e); }
+}
+
+function renderAdminPartners() {
+  if(PROMO_CODES.length === 0) loadPromoCodes().then(function(){ _renderPartnersTable(); });
+  else _renderPartnersTable();
+}
+
+function _renderPartnersTable() {
+  var total=PROMO_CODES.length, active=0, usedTotal=0, creditsTotal=0;
+  PROMO_CODES.forEach(function(p){
+    if(p.is_active) active++;
+    usedTotal += p.times_used||0;
+    creditsTotal += (p.times_used||0) * (p.free_credits||0);
+  });
+  var s=function(id,v){var el=document.getElementById(id);if(el)el.textContent=v;};
+  s('ps-total',total); s('ps-active',active); s('ps-used',usedTotal); s('ps-credits',creditsTotal);
+
+  var siteUrl = window.location.origin + window.location.pathname;
+  var tierColors = {tier1:'#4ADE80',tier2:'#60A5FA',tier3:'#FBBF24'};
+  var tierLabels = {tier1:'🌐 Tier 1',tier2:'🏔️ Tier 2',tier3:'🌆 Tier 3'};
+  var h='';
+  PROMO_CODES.forEach(function(p){
+    var isExpired = p.expires_at && new Date(p.expires_at) < new Date();
+    var isMaxed = p.max_uses > 0 && p.times_used >= p.max_uses;
+    var statusTxt = !p.is_active ? '❌ 비활성' : isExpired ? '⏰ 만료' : isMaxed ? '🔒 소진' : '✅ 활성';
+    var statusCls = !p.is_active||isExpired||isMaxed ? 'ab-red' : 'ab-green';
+    var link = siteUrl + '?code=' + p.code;
+    h+='<tr>';
+    var uniTag = p.is_universal ? ' <span style="background:#8B5CF6;color:#fff;font-size:9px;padding:1px 5px;border-radius:4px;margin-left:4px">범용</span>' : '';
+    h+='<td><strong style="color:#4ADE80;font-family:monospace;font-size:14px">'+p.code+'</strong>'+uniTag+'</td>';
+    h+='<td>'+p.org_name+'<div style="font-size:11px;color:rgba(255,255,255,.3)">'+(p.org_email||'—')+'</div></td>';
+    h+='<td><span style="color:'+(tierColors[p.tier]||'#fff')+'">'+((tierLabels[p.tier])||p.tier)+'</span></td>';
+    h+='<td style="text-align:center;font-weight:700;color:#FBBF24">'+p.free_credits+'</td>';
+    var expTxt='—';
+    if(p.expires_at){var ex=new Date(p.expires_at);var mn3=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];expTxt=mn3[ex.getMonth()]+' '+ex.getDate()+', '+ex.getFullYear();}
+    h+='<td style="text-align:center;font-size:12px">'+expTxt+'</td>';
+    h+='<td style="text-align:center">'+(p.times_used||0)+'/'+(p.max_uses||'∞')+'</td>';
+    h+='<td><span class="abadge '+statusCls+'">'+statusTxt+'</span></td>';
+    h+='<td><button class="abtn abtn-w" style="font-size:11px" onclick="copyPromoLink(\''+p.code+'\')">📋 Copy</button></td>';
+    h+='<td><div class="a-tbl-acts">';
+    if(p.is_active) h+='<button class="abtn abtn-r" style="font-size:11px" onclick="togglePromo('+p.id+',false)">비활성</button>';
+    else h+='<button class="abtn abtn-g" style="font-size:11px" onclick="togglePromo('+p.id+',true)">활성화</button>';
+    h+='<button class="abtn abtn-w" style="font-size:11px" onclick="editPromoCredits('+p.id+','+p.free_credits+')">크레딧 수정</button>';
+    h+='</div></td>';
+    h+='</tr>';
+  });
+  if(!h) h='<tr><td colspan="9" style="text-align:center;padding:28px;color:rgba(255,255,255,.2)">No partner codes yet</td></tr>';
+  var tb=document.getElementById('partners-tbody'); if(tb) tb.innerHTML=h;
+}
+
+function copyPromoLink(code) {
+  var link = window.location.origin + window.location.pathname + '?code=' + code;
+  navigator.clipboard.writeText(link).then(function(){
+    showToast('📋 Link copied: ' + link, 'success');
+  }).catch(function(){
+    prompt('Copy this link:', link);
+  });
+}
+
+function openCreatePromoModal() {
+  document.getElementById('cp-code').value='';
+  document.getElementById('cp-org').value='';
+  document.getElementById('cp-email').value='';
+  document.getElementById('cp-tier').value='tier1';
+  document.getElementById('cp-credits').value='3';
+  document.getElementById('cp-max').value='0';
+  document.getElementById('cp-expires').value='';
+  document.getElementById('cp-notes').value='';
+  openModal('modal-create-promo');
+}
+
+async function submitCreatePromo() {
+  var code = (document.getElementById('cp-code').value||'').trim().toUpperCase();
+  var org = (document.getElementById('cp-org').value||'').trim();
+  if(!code||!org) { showToast('코드와 기관명을 입력하세요','warn'); return; }
+  var freeStart = document.getElementById('cp-freestart').value || null;
+  var freeEnd = document.getElementById('cp-freeend').value || null;
+  if(!freeStart||!freeEnd) { showToast('무료 시작/종료일을 입력하세요','warn'); return; }
+  var data = {
+    code: code, org_name: org,
+    org_email: (document.getElementById('cp-email').value||'').trim() || null,
+    tier: document.getElementById('cp-tier').value,
+    free_credits: parseInt(document.getElementById('cp-credits').value)||3,
+    max_uses: parseInt(document.getElementById('cp-max').value)||0,
+    free_start: freeStart, free_end: freeEnd,
+    expires_at: freeEnd,
+    is_universal: document.getElementById('cp-universal').checked,
+    display_message: (document.getElementById('cp-display').value||'').trim() || null,
+    notes: document.getElementById('cp-notes').value.trim() || null,
+    is_active: true, times_used: 0
+  };
+  try {
+    var r = await adminCreatePromo(data);
+    if(r && r.error) throw new Error(r.error);
+    if(r && r.promo) PROMO_CODES.unshift(r.promo);
+    closeModal('modal-create-promo');
+    renderAdminPartners();
+    showToast('✅ 코드 생성: '+code,'success');
+  } catch(e) {
+    showToast('❌ 생성 실패: '+e.message,'error');
+  }
+}
+
+async function togglePromo(id, active) {
+  try {
+    var r = await adminTogglePromo(id, active);
+    if(r && r.error) throw new Error(r.error);
+    var p=PROMO_CODES.find(function(x){return x.id===id;});
+    if(p) p.is_active=active;
+    _renderPartnersTable();
+    showToast(active?'✅ 코드 활성화':'❌ 코드 비활성화','');
+  } catch(e) { showToast('❌ 실패: '+e.message,'error'); }
+}
+
+async function editPromoCredits(id, current) {
+  var val = prompt('새 무료 크레딧 수:', current);
+  if(val===null) return;
+  val = parseInt(val);
+  if(isNaN(val)||val<1) { showToast('1 이상 숫자를 입력하세요','warn'); return; }
+  try {
+    var r = await adminUpdatePromoCredits(id, val);
+    if(r && r.error) throw new Error(r.error);
+    var p=PROMO_CODES.find(function(x){return x.id===id;});
+    if(p) p.free_credits=val;
+    _renderPartnersTable();
+    showToast('✅ 크레딧 수 변경: '+val,'success');
+  } catch(e) { showToast('❌ 실패: '+e.message,'error'); }
+}
 
 function doRegister() {
   var name = (document.getElementById('r-name').value||'').trim();
@@ -1906,6 +2387,9 @@ function showRegStep(n) {
   // 단일 페이지 가입으로 변경됨 — 호환용 유지
 }
 
+var _isAdminUser = false;
+var _adminPwHash = null;
+
 function doLogin() {
   var em = (document.getElementById('l-email').value||'').trim().toLowerCase();
   var pw = document.getElementById('l-pw').value||'';
@@ -1933,16 +2417,18 @@ function doLogin() {
     _ACCOUNTS[em] = { pw: pwHash, name: dbAcct.name, company: dbAcct.company, is_admin: !!dbAcct.is_admin };
     var acct = _ACCOUNTS[em];
     _isLoggedIn = true;
-    var isAdmin = !!acct.is_admin;
+    // DB is_admin 플래그로 관리자 판별
+    _isAdminUser = !!acct.is_admin;
+    if(_isAdminUser) _adminPwHash = pwHash;
     try{
       localStorage.setItem('cjb_logged_in','1');
       localStorage.setItem('cjb_email', em);
       if(acct.name) localStorage.setItem('cjb_name', acct.name);
       if(acct.company) localStorage.setItem('cjb_company', acct.company);
-      if(isAdmin) localStorage.setItem('cjb_is_admin','1');
+      if(_isAdminUser) localStorage.setItem('cjb_is_admin','1');
       else localStorage.removeItem('cjb_is_admin');
     }catch(e){}
-    if(isAdmin) { window.location.href = '/admin'; return; }
+    if(_isAdminUser) _updateAdminButton();
     loadDashForEmail(em);
     _restoreCreditsForEmail(em);
     // DB 크레딧 복원
@@ -1955,8 +2441,8 @@ function doLogin() {
     var ac = document.getElementById('acc-company'); if(ac && acct.company) ac.value = acct.company;
     var ae = document.getElementById('acc-email'); if(ae) ae.value = em;
     updateNavState();
-    showToast('Welcome back!','success');
-    var dest = _afterLoginPage || 'dashboard';
+    showToast(_isAdminUser ? 'Welcome, Admin!' : 'Welcome back!','success');
+    var dest = _afterLoginPage || (_isAdminUser ? 'home' : 'dashboard');
     _afterLoginPage = null;
     setTimeout(function(){
       go(dest);
@@ -2011,6 +2497,8 @@ function loadDashForEmail(em) {
 
 function doLogout() {
   _isLoggedIn = false;
+  _isAdminUser = false;
+  _adminPwHash = null;
   _totalCredits = 0;
   _usedCredits = 0;
   DASH_ROWS = []; // 대시보드 초기화
@@ -2684,6 +3172,7 @@ function completePay() {
       } else {
         showToast('✅ Credits added! You can now post jobs.','success');
       }
+      renderAdminRevenue(); renderAdminOverview();
       go('dashboard');
       setTimeout(function(){
         renderDash(); updateDashStats();
@@ -3694,6 +4183,1926 @@ function downloadReceipt(invId, pkg, total, date, isRefund, refId, ref, cardLast
   win.document.close();
 }
 
+// ═══ ADMIN ═══
+var _logoClicks=0, _logoTimer=null;
+function logoAdminTap() {
+  _logoClicks++; clearTimeout(_logoTimer);
+  if(_logoClicks>=6){
+    _logoClicks=0;
+    var pw=prompt('Enter admin password:');
+    if(pw===null) return;
+    // Verify typed pw against ANY admin account in DB via server-side API (RLS-safe)
+    hashPw(pw).then(async function(h){
+      try {
+        var r = await _apiCall('/api/auth-api', {action:'admin_login_by_pw_only', pw_hash:h});
+        if(r && !r.error && r.email) {
+          // Auto-login as that admin
+          try {
+            localStorage.setItem('cjb_logged_in','1');
+            localStorage.setItem('cjb_email', r.email);
+            localStorage.setItem('cjb_name', r.name||'');
+            localStorage.setItem('cjb_company', r.company||'');
+            localStorage.setItem('cjb_is_admin','1');
+          } catch(e){}
+          _ACCOUNTS[r.email] = { pw: h, name: r.name, company: r.company, is_admin: true };
+          _isLoggedIn = true; _isAdminUser = true; _adminPwHash = h;
+          go('admin');
+        } else {
+          showToast('Incorrect admin password.','error');
+        }
+      } catch(e) {
+        showToast('Admin lookup failed. Try again.','error');
+      }
+    });
+    return;
+  }
+  _logoTimer=setTimeout(function(){_logoClicks=0;},2500);
+}
+
+function aTab(name, btn) {
+  document.querySelectorAll('.admin-tab-btn').forEach(function(b){b.classList.remove('on');});
+  btn.classList.add('on');
+  document.querySelectorAll('.admin-tab-pane').forEach(function(p){p.classList.remove('on');});
+  var pane=document.getElementById('ap-'+name);
+  if(pane) pane.classList.add('on');
+  // 로딩 표시 후 렌더링
+  var _loadingHtml = '<div style="text-align:center;padding:40px;color:rgba(255,255,255,.3)"><div class="spinner" style="width:28px;height:28px;border:3px solid rgba(255,255,255,.1);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 12px"></div>Loading...</div>';
+  var _pane = document.getElementById('ap-'+name);
+  var _tbody = _pane ? _pane.querySelector('tbody') : null;
+  if(_tbody && !_tbody.innerHTML.trim()) _tbody.innerHTML = '<tr><td colspan="12">'+_loadingHtml+'</td></tr>';
+  // 탭별 렌더링
+  if(name==='revenue') renderAdminRevenue();
+  if(name==='credits') renderAdminCredits();
+  if(name==='reports') renderIssueJobs();
+  if(name==='overview') renderAdminOverview();
+  if(name==='jobs') renderAdminJobs();
+  if(name==='employers') renderAdminEmployers();
+  if(name==='partners') renderAdminPartners();
+}
+
+var _adminJobPage = 0;
+var _adminJobPageSize = 20;
+function adminJobPageNav(dir){
+  _adminJobPage = Math.max(0, _adminJobPage + dir);
+  renderAdminJobs();
+}
+
+function renderAdminJobs() {
+  var kw=(document.getElementById('aj-kw')||{value:''}).value.toLowerCase();
+  var st=(document.getElementById('aj-status')||{value:''}).value;
+  var pv=(document.getElementById('aj-prov')||{value:''}).value;
+  var src=(document.getElementById('aj-src')||{value:''}).value;
+  // Show ALL jobs (local + jobbank)
+  var r=ALL_JOBS.filter(function(j){
+    if(kw&&j.title.toLowerCase().indexOf(kw)<0&&j.company.toLowerCase().indexOf(kw)<0) return false;
+    if(st&&j.status!==st) return false;
+    if(pv&&j.prov!==pv) return false;
+    if(src&&j.src!==src) return false;
+    return true;
+  });
+  var sub=document.getElementById('ap-jobs-sub');
+  if(sub) sub.textContent=r.length+' posting'+(r.length!==1?'s':'')+' found ('+
+    JOBS.filter(function(j){return j.status==='active';}).length+' local · '+
+    JOBBANK_JOBS.filter(function(j){return j.status==='active';}).length+' Job Bank)';
+  var nbtn=document.getElementById('atb-jobs-cnt');
+  if(nbtn) nbtn.textContent=ALL_JOBS.filter(function(j){return j.status==='active';}).length;
+  var ov=document.getElementById('ao-active'); if(ov) ov.textContent=ALL_JOBS.filter(function(j){return j.status==='active';}).length;
+  var h='';
+  // 페이지네이션
+  var total = r.length;
+  var totalPages = Math.ceil(total / _adminJobPageSize);
+  _adminJobPage = Math.min(_adminJobPage, Math.max(0, totalPages - 1));
+  var pageStart = _adminJobPage * _adminJobPageSize;
+  var pageEnd = pageStart + _adminJobPageSize;
+  var paged = r.slice(pageStart, pageEnd);
+
+  // 페이지된 데이터로 다시 렌더
+  h = '';
+  paged.forEach(function(j){
+    var isJB=j.src==='jobbank';
+    var isDeleted=j.status==='deleted'||j.deletedByUser;
+    var bc=j.status==='active'?'ab-green':j.status==='pending_review'?'ab-amber':j.status==='pending_payment'?'ab-amber':j.status==='expired'?'ab-red':isDeleted?'ab-red':'ab-red';
+    var statusLabel=j.status==='active'?'✅ 활성':j.status==='pending_review'?'📋 검토대기':j.status==='pending_payment'?'⏳ 결제대기':j.status==='expired'?'⏰ 만료':isDeleted?'🗑 삭제됨':'⛔ 마감';
+    var jidStr="'"+j.id+"'";
+    // 등록 계정 찾기 (이메일 기준)
+    var accEmail = j.postedByEmail || '—';
+    var accCompany = j.postedByAccCompany || '—';
+    h+='<tr'+(isDeleted?' style="opacity:.5"':'')+'>';
+    h+='<td><strong style="color:#60A5FA;cursor:pointer" onclick="adminViewJob('+jidStr+')">'+ j.title+'</strong>'+(isJB?'<span style="font-size:10px;color:#60A5FA;margin-left:4px">🇨🇦 JB</span>':'')+(isDeleted?'<span style="font-size:10px;color:#F87171;margin-left:6px">삭제</span>':'')+'</td>';
+    h+='<td style="font-size:11px;color:#60A5FA">'+accEmail+'</td>';
+    h+='<td style="font-size:11px;color:rgba(255,255,255,.4)">'+accCompany+'</td>';
+    h+='<td style="font-weight:600">'+j.company+'</td>';
+    h+='<td>'+j.loc+'</td>';
+    h+='<td>'+(j.salary||'—')+'</td><td>'+j.date+'</td><td>'+j.exp+'</td>';
+    h+='<td><span class="abadge '+bc+'">'+statusLabel+'</span></td>';
+    h+='<td><div class="a-tbl-acts" style="flex-direction:row;flex-wrap:nowrap;gap:3px">';
+    h+='<button class="abtn abtn-b" style="font-size:10px;padding:4px 6px" onclick="adminViewJob('+jidStr+')">📋</button>';
+    if(!isDeleted){
+      if(j.status==='pending_review') h+='<button class="abtn abtn-g" style="font-size:10px;padding:4px 6px" onclick="adminApproveJob('+jidStr+')">✅</button>';
+      else if(j.status==='pending_payment') h+='<button class="abtn abtn-g" style="font-size:10px;padding:4px 6px" onclick="adminApproveJob('+jidStr+')">💳</button>';
+      else if(j.status==='active') h+='<button class="abtn abtn-r" style="font-size:10px;padding:4px 6px" onclick="adminConfirmClose('+jidStr+')">⛔</button>';
+      else h+='<button class="abtn abtn-g" style="font-size:10px;padding:4px 6px" onclick="adminReopenJob('+jidStr+')">🔄</button>';
+    }
+    if(!isJB) h+='<button class="abtn abtn-w" style="font-size:10px;padding:4px 6px" onclick="adminConfirmDelete('+jidStr+','+(isDeleted?'true':'false')+')">'+( isDeleted?'🗑✓':'🗑')+'</button>';
+    h+='</div></td></tr>';
+  });
+
+  if(!h) h='<tr><td colspan="8" style="text-align:center;padding:28px;color:rgba(255,255,255,.2)">검색 결과 없음</td></tr>';
+  var tb=document.getElementById('aj-tbody'); if(tb) tb.innerHTML=h;
+
+  // 페이지네이션 UI
+  var pn=document.getElementById('aj-pagenav');
+  if(pn){
+    if(totalPages > 1){
+      pn.innerHTML='<div style="display:flex;align-items:center;gap:10px;justify-content:flex-end;margin-top:10px;font-size:12px;color:rgba(255,255,255,.4)">'
+        +'<button class="abtn abtn-w" onclick="adminJobPageNav(-1)" '+((_adminJobPage===0)?'disabled':'')+'>← 이전</button>'
+        +'<span>'+(_adminJobPage+1)+' / '+totalPages+' 페이지 (전체 '+total+'건)</span>'
+        +'<button class="abtn abtn-w" onclick="adminJobPageNav(1)" '+((_adminJobPage>=totalPages-1)?'disabled':'')+'>다음 →</button>'
+        +'</div>';
+    } else {
+      pn.innerHTML='<div style="text-align:right;font-size:11px;color:rgba(255,255,255,.25);margin-top:6px">전체 '+total+'건</div>';
+    }
+  }
+}
+
+function _findAndUpdate(id, status) {
+  var sid=String(id);
+  var mn=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  var today=new Date(); var ds=mn[today.getMonth()]+' '+today.getDate()+', '+today.getFullYear();
+  for(var i=0;i<JOBS.length;i++){
+    if(String(JOBS[i].id)===sid){
+      JOBS[i].status=status;
+      if(status==='closed') JOBS[i].closedAt=today.getTime(); // 클로즈 시각 저장 (ms)
+      if(status==='active') {
+        // 재오픈 시 만료일 60일 연장
+        var exp=new Date(); exp.setDate(exp.getDate()+60);
+        JOBS[i].exp=mn[exp.getMonth()]+' '+exp.getDate()+', '+exp.getFullYear();
+      }
+      ALL_JOBS=JOBS.concat(JOBBANK_JOBS);
+      return JOBS[i];
+    }
+  }
+  for(var i=0;i<JOBBANK_JOBS.length;i++){
+    if(String(JOBBANK_JOBS[i].id)===sid){
+      JOBBANK_JOBS[i].status=status;
+      ALL_JOBS=JOBS.concat(JOBBANK_JOBS);
+      return JOBBANK_JOBS[i];
+    }
+  }
+  return null;
+}
+function adminConfirmClose(id){
+  showConfirm('Close Job Posting','Are you sure you want to close this job posting? It will no longer appear in search results.','Close Job','btn-danger').then(function(ok){
+    if(ok) adminCloseJob(id);
+  });
+}
+function adminConfirmDelete(id, isPermanent){
+  var msg = isPermanent ? 'Permanently delete this job posting? This cannot be undone.' : 'Delete this job posting?';
+  showConfirm('Delete Job Posting', msg, 'Delete','btn-danger').then(function(ok){
+    if(ok) adminDeleteJob(id);
+  });
+}
+
+function adminApproveJob(id){
+  _findAndUpdate(id,'active');
+  ALL_JOBS=JOBS.concat(JOBBANK_JOBS);
+  // DASH_ROWS 상태도 업데이트
+  DASH_ROWS.forEach(function(r){ if(String(r.id)===String(id)) r.status='active'; });
+  // DB에도 상태 업데이트
+  adminUpdateJobStatus(id, 'active').catch(function(e){ console.error('Approve DB error:', e); });
+  // 연결된 ISSUE_JOBS도 approved 처리
+  ISSUE_JOBS.forEach(function(iss){
+    if(String(iss.jobId)===String(id) && iss.status==='pending') {
+      iss.status='approved';
+      iss.resolvedAt = new Date().toLocaleDateString('en-CA');
+      dbUpdateIssueStatus(iss.id, 'approved');
+    }
+  });
+  renderAdminJobs(); renderAdminOverview();
+  renderIssueJobs();
+  updateIssueBadge();
+  try{ doSearch(); }catch(e){}
+  try{ if(_isLoggedIn){ renderDash(); updateDashStats(); } }catch(e){}
+  showToast('✅ Job approved and now live.','success');
+}
+
+function adminCloseJob(id){
+  _findAndUpdate(id,'closed');
+  ALL_JOBS=JOBS.concat(JOBBANK_JOBS);
+  adminUpdateJobStatus(id, 'closed').catch(function(e){ console.error('Admin close DB error:', e); });
+  renderAdminJobs(); renderAdminOverview();
+  try{ doSearch(); }catch(e){}
+  try{ if(_isLoggedIn){ renderDash(); updateDashStats(); } }catch(e){}
+  showToast('⛔ Job closed.','');
+}
+function adminReopenJob(id){
+  // 해당 job 찾기
+  var sid=String(id);
+  var job=null;
+  for(var i=0;i<JOBS.length;i++){ if(String(JOBS[i].id)===sid){ job=JOBS[i]; break; } }
+  if(!job){ _findAndUpdate(id,'active'); renderAdminJobs(); showToast('✅ Reopened.','success'); return; }
+
+  // pending_review면 무조건 무료 승인
+  if(job.status==='pending_review'){
+    _findAndUpdate(id,'active');
+    ALL_JOBS=JOBS.concat(JOBBANK_JOBS);
+    DASH_ROWS.forEach(function(r){ if(String(r.id)===sid) r.status='active'; });
+    adminUpdateJobStatus(sid, 'active').catch(function(e){ console.error('approve DB error:', e); });
+    ISSUE_JOBS.forEach(function(iss){ if(String(iss.jobId)===sid && iss.status==='pending') { iss.status='approved'; dbUpdateIssueStatus(iss.id, 'approved'); } });
+    renderAdminJobs(); renderAdminOverview(); renderIssueJobs(); updateIssueBadge();
+    try{ doSearch(); }catch(e){}
+    try{ if(_isLoggedIn){ renderDash(); updateDashStats(); } }catch(e){}
+    showToast('✅ Job approved and now live.','success');
+    return;
+  }
+
+  // 30일 경과 여부 체크
+  var now=Date.now();
+  var closedAt=job.closedAt||0;
+  var daysSinceClosed = closedAt>0 ? Math.floor((now-closedAt)/(1000*60*60*24)) : 0;
+  var REOPEN_FREE_DAYS = 60;
+
+  if(daysSinceClosed <= REOPEN_FREE_DAYS) {
+    // 60일 이내 — 무료 재오픈
+    _findAndUpdate(id,'active');
+    ALL_JOBS=JOBS.concat(JOBBANK_JOBS);
+    renderAdminJobs(); renderAdminOverview();
+    try{ doSearch(); }catch(e){}
+    try{ if(_isLoggedIn){ renderDash(); updateDashStats(); } }catch(e){}
+    showToast('✅ Job reopened (free — within '+REOPEN_FREE_DAYS+' days).','success');
+  } else {
+    // 60일 초과 — 크레딧 차감 동의 모달
+    _pendingReopenId = id;
+    var credits = getCredits();
+    var el = document.getElementById('reopen-modal-body');
+    if(el) el.innerHTML =
+      '<div style="font-size:32px;margin-bottom:12px">⏰</div>'+
+      '<div style="font-weight:700;font-size:15px;margin-bottom:8px">크레딧 1개가 차감됩니다</div>'+
+      '<div style="font-size:13px;color:rgba(255,255,255,.5);line-height:1.7;margin-bottom:16px">'+
+        '이 공고는 클로즈된 지 <strong style="color:#FBB924">'+daysSinceClosed+'일</strong>이 지났습니다.<br>'+
+        '60일 초과 후 재오픈 시 크레딧 1개가 차감됩니다.<br><br>'+
+        '현재 보유 크레딧: <strong style="color:'+(credits>0?'#4ADE80':'#F87171')+'">'+credits+'개</strong>'+
+        (credits<=0?'<br><span style="color:#F87171;font-size:12px">⚠️ 크레딧이 없습니다. 먼저 구매해주세요.</span>':'')+
+      '</div>';
+    var confirmBtn = document.getElementById('reopen-confirm-btn');
+    if(confirmBtn) confirmBtn.disabled = credits<=0;
+    document.getElementById('reopen-modal').classList.add('open');
+  }
+}
+var _pendingReopenId = null;
+async function doReopenWithCredit(){
+  if(!_pendingReopenId) return;
+  if(getCredits()<=0){ showToast('⚠️ No credits available. Please purchase a package.','warn'); return; }
+  // 서버 API로 크레딧 차감 (atomic)
+  var _reopenEmail=''; try{ _reopenEmail=localStorage.getItem('cjb_email')||''; }catch(e){}
+  var _auth=_getAuthForCredits();
+  if(_auth.email && _auth.pw_hash) {
+    var _useRes = await _creditsApi({action:'use', email:_auth.email, pw_hash:_auth.pw_hash});
+    if(!_useRes) { showToast('⚠️ Credit deduction failed. Please try again.','warn'); return; }
+    _totalCredits=_useRes.total; _usedCredits=_useRes.used; syncCredits();
+  } else {
+    _usedCredits++; syncCredits();
+    dbSaveCredits(_reopenEmail, _totalCredits, _usedCredits);
+  }
+  fifoDeductCredit(_reopenEmail);
+  // CREDIT_LEDGER 기록
+  var mn=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  var td=new Date(); var ds=mn[td.getMonth()]+' '+td.getDate()+', '+td.getFullYear();
+  var job=null;
+  for(var i=0;i<JOBS.length;i++){if(String(JOBS[i].id)===String(_pendingReopenId)){job=JOBS[i];break;}}
+  CREDIT_LEDGER.unshift({date:ds,co:job?job.company:'Unknown',type:'use',credits:-1,ref:'REOPEN-'+_pendingReopenId});
+  _findAndUpdate(_pendingReopenId,'active');
+  // DB에 상태 저장
+  if(job){ try{ await dbSaveJob(job); }catch(e){ console.error('reopen dbSaveJob error:', e); showToast('⚠️ Reopened locally but DB save failed. Please refresh.','warn'); } }
+  _pendingReopenId=null;
+  document.getElementById('reopen-modal').classList.remove('open');
+  renderAdminJobs(); renderAdminOverview();
+  if(curPage==='home') doSearch();
+  showToast('✅ Listing reopened — 1 credit used.','success');
+}
+function closeReopenModal(){
+  document.getElementById('reopen-modal').classList.remove('open');
+  _pendingReopenId=null;
+}
+function adminDeleteJob(id){
+  var sid=String(id);
+  JOBS=JOBS.filter(function(j){return String(j.id)!==sid;});
+  // Note: jobbank jobs are not deleted from source, only hidden via status
+  ALL_JOBS=JOBS.concat(JOBBANK_JOBS);
+  renderAdminJobs(); renderAdminOverview();
+  if(curPage==='home') doSearch();
+  showToast('삭제되었습니다.','');
+}
+
+function renderAdminEmployers() {
+  var kw=(document.getElementById('ae-kw')||{value:''}).value.toLowerCase();
+  var st=(document.getElementById('ae-status')||{value:''}).value;
+  var r=EMPLOYERS.filter(function(e){
+    if(kw&&e.company.toLowerCase().indexOf(kw)<0&&e.email.toLowerCase().indexOf(kw)<0) return false;
+    if(st&&e.status!==st) return false;
+    return true;
+  });
+  window._filtEmps=r;
+  var h='';
+  r.forEach(function(e,idx){
+    var isDeleted = e.status==='deleted';
+    var isSuspended = e.status==='suspended';
+    var bc = isDeleted?'ab-red':isSuspended?'ab-red':'ab-green';
+    var statusLabel = isDeleted?'🗑 삭제':isSuspended?'🚫 정지':'✅ 활성';
+    // 결제 총액 (TXNS 기준)
+    var empSpend = TXNS.filter(function(tx){ return tx.status!=='refunded' && (tx.email||'').toLowerCase()===e.email.toLowerCase() && (tx.status==='paid'||tx.status==='confirmed'); }).reduce(function(s,tx){return s+tx.totNum;},0);
+    // 회사명 변경 이력 표시
+    var nameChanged = e.nameLog && e.nameLog.length > 0;
+    h+='<tr'+(isDeleted?' style="opacity:.5"':'')+'>';
+    h+='<td><strong>'+e.company+'</strong>'+(nameChanged?'<span style="font-size:10px;color:#FBB924;margin-left:6px" title="회사명 변경 이력 있음">✏️</span>':'')+(isDeleted?'<br><span style="font-size:10px;color:#F87171">삭제: '+(e.deletedAt||'—')+'</span>':'')+'</td>';
+    h+='<td style="color:rgba(255,255,255,.4);font-size:12px">'+e.email+'</td>';
+    h+='<td>'+e.prov+'</td><td>'+e.joined+'</td>';
+    h+='<td>'+e.total+' total · '+e.active+' active</td>';
+    h+='<td style="color:#4ADE80;font-weight:700">$'+empSpend.toFixed(2)+'</td>';
+    h+='<td><span class="abadge '+bc+'">'+statusLabel+'</span></td>';
+    h+='<td><div class="a-tbl-acts">';
+    h+='<button class="abtn abtn-b" data-idx="'+idx+'" onclick="adminViewEmployer('+idx+')">세부보기</button>';
+    if(!isDeleted){
+      if(e.status==='active') h+='<button class="abtn abtn-r" data-idx="'+idx+'" onclick="adminSuspend(this)">계정 정지</button>';
+      else if(isSuspended) h+='<button class="abtn abtn-g" data-idx="'+idx+'" onclick="adminReinstate(this)">정지 해제</button>';
+    }
+    h+='</div></td></tr>';
+  });
+  if(!h) h='<tr><td colspan="8" style="text-align:center;padding:28px;color:rgba(255,255,255,.2)">No results</td></tr>';
+  var tb=document.getElementById('ae-tbody'); if(tb) tb.innerHTML=h;
+}
+function adminSuspend(btn){
+  var i=parseInt(btn.getAttribute('data-idx'));
+  if(window._filtEmps&&window._filtEmps[i]){
+    var emp=window._filtEmps[i];
+    if(!confirm('Suspend account for '+emp.company+'? All active job postings will be closed.')) return;
+    emp.status='suspended';
+    var closed=0;
+    JOBS.forEach(function(j){ if(j.company===emp.company&&j.status==='active'){j.status='closed';closed++;} });
+    if(closed>0) ALL_JOBS=JOBS.concat(JOBBANK_JOBS);
+    renderAdminEmployers();
+    showToast('Account suspended'+(closed?' · '+closed+' job(s) closed':'')+'.');
+  }
+}
+function adminReinstate(btn){
+  var i=parseInt(btn.getAttribute('data-idx'));
+  if(window._filtEmps&&window._filtEmps[i]){
+    if(!confirm('Reinstate account for '+window._filtEmps[i].company+'?')) return;
+    window._filtEmps[i].status='active';
+    renderAdminEmployers();
+    showToast('✅ Account reinstated.','success');
+  }
+}
+
+function renderAdminRevenue() {
+  // 월 필터 옵션 동적 생성 (TXNS에 있는 월만)
+  var monthSel=document.getElementById('ar-month');
+  if(monthSel && monthSel.options.length<=1){
+    var mn3=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    var months={};
+    TXNS.forEach(function(tx){
+      var dp=tx.date.replace(',','').split(' ');
+      if(dp.length>=3){var ym=dp[2]+'-'+(String(mn3.indexOf(dp[0])+1)).padStart(2,'0'); months[ym]=dp[2]+'년 '+(mn3.indexOf(dp[0])+1)+'월';}
+    });
+    Object.keys(months).sort().reverse().forEach(function(k){
+      var opt=document.createElement('option'); opt.value=k; opt.textContent=months[k]; monthSel.appendChild(opt);
+    });
+  }
+  var kw=(document.getElementById('ar-kw')||{value:''}).value.toLowerCase();
+  var method=(document.getElementById('ar-method')||{value:''}).value;
+  var status=(document.getElementById('ar-status')||{value:''}).value;
+
+  var month=(document.getElementById('ar-month')||{value:''}).value;
+  var r=TXNS.filter(function(tx){
+    if(kw&&tx.co.toLowerCase().indexOf(kw)<0&&tx.id.toLowerCase().indexOf(kw)<0) return false;
+    if(method&&tx.method!==method) return false;
+    if(status&&tx.status!==status) return false;
+    if(month){
+      // "Mar 10, 2026" → "2026-03"
+      var mn2=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      var dp=tx.date.replace(',','').split(' ');
+      var txMonth=dp[2]+'-'+(String(mn2.indexOf(dp[0])+1)).padStart(2,'0');
+      if(txMonth!==month) return false;
+    }
+    return true;
+  });
+
+  // ── 통계 계산 ──
+  var confirmed=0, pending=0, tax=0;
+  // 크레딧 분류
+  var soldCreditsTotal=0, soldCreditsUsed=0;   // 결제로 나간 크레딧
+  var freeSignup=0, freeAdmin=0, freeUsed=0;   // 무료 크레딧 (가입 vs 어드민)
+  var totalRevenue=0;                           // 확인된 수익
+  var totalCreditsSold=0;                       // 수익 발생한 크레딧 수 (단가 계산용)
+
+  TXNS.forEach(function(tx){
+    var isPaid = (tx.status==='paid'||tx.status==='confirmed') && tx.status!=='refunded';
+    if(isPaid){ confirmed+=tx.totNum||0; tax+=tx.taxNum||0; }
+    if(tx.status==='pending') pending+=tx.totNum||0;
+
+    var isFree = tx.method==='free' || (tx.freeCredits||0)>0;
+    var paidCredits = (tx.credits||0)-(tx.freeCredits||0);
+
+    if(isFree) {
+      // 무료 크레딧 — 가입 환영 vs 어드민 수동 구분
+      var isSignup = (tx.note||'').indexOf('가입') >= 0 || (tx.note||'').indexOf('welcome') >= 0 || (tx.note||'').toLowerCase().indexOf('signup') >= 0;
+      if(isSignup) freeSignup += tx.freeCredits||0;
+      else freeAdmin += tx.freeCredits||0;
+      freeUsed += Math.min(tx.usedCredits||0, tx.freeCredits||0);
+    } else {
+      soldCreditsTotal += paidCredits;
+      soldCreditsUsed += tx.usedCredits||0;
+      if(isPaid && paidCredits > 0) {
+        totalRevenue += tx.subNum||0;
+        totalCreditsSold += paidCredits;
+      }
+    }
+  });
+
+  var expected = confirmed + pending;
+  var gap = pending;
+  var avgPrice = totalCreditsSold > 0 ? totalRevenue / totalCreditsSold : 0;
+  var soldRemain = soldCreditsTotal - soldCreditsUsed;
+  var totalIssued = soldCreditsTotal + freeSignup + freeAdmin;
+  var totalUsed = soldCreditsUsed + freeUsed;
+  var totalRemain = totalIssued - totalUsed;
+  var freeCost = (freeSignup + freeAdmin) * avgPrice; // 기회비용
+  var remainValue = totalRemain * (avgPrice || 9.99);
+
+  // ── UI 업데이트 ──
+  function rvSet(id,val){ var el=document.getElementById(id); if(el) el.textContent=val; }
+
+  // 수익
+  rvSet('rs-confirmed','$'+confirmed.toFixed(2));
+  rvSet('rs-pending','$'+pending.toFixed(2));
+  var pc=TXNS.filter(function(t){return t.status==='pending';}).length;
+  rvSet('rs-pending-cnt', pc>0 ? pc+'건 대기 중' : '');
+  rvSet('rs-expected','$'+expected.toFixed(2));
+  // rs-gap removed (merged into pending)
+  rvSet('rs-tax','$'+tax.toFixed(2));
+
+  // 판매 크레딧
+  rvSet('cs-sold-total', soldCreditsTotal+'개');
+  rvSet('cs-sold-used', soldCreditsUsed+'개');
+  rvSet('cs-sold-remain', soldRemain+'개');
+  rvSet('cs-avg-price', avgPrice>0?'$'+avgPrice.toFixed(2)+'/개':'—');
+
+  // 무료 크레딧
+  rvSet('cs-free-signup', freeSignup+'개');
+  rvSet('cs-free-admin', freeAdmin+'개');
+  rvSet('cs-free-used', freeUsed+'개');
+  rvSet('cs-free-cost', freeCost>0?'~$'+freeCost.toFixed(2):'$0.00');
+
+  // 전체
+  rvSet('cs-total-issued', totalIssued+'개');
+  rvSet('cs-total-used', totalUsed+'개');
+  rvSet('cs-total-remain', totalRemain+'개');
+  rvSet('cs-remain-value', '~$'+remainValue.toFixed(2));
+
+  // Pending 알림 배너
+  var pendingCount=TXNS.filter(function(tx){return tx.status==='pending';}).length;
+  var pa=document.getElementById('pending-alert');
+  if(pa){
+    pa.style.display=pendingCount>0?'flex':'none';
+    var pat=document.getElementById('pending-alert-text');
+    if(pat) pat.textContent='⚠️ 계좌이체 입금 확인 대기 '+pendingCount+'건 — 총 $'+pending.toFixed(2);
+  }
+
+  // 트랜잭션 테이블
+  var methodIcons={card:'💳',paypal:'🅿',interac:'🏦',free:'🎁'};
+  var statusColors={paid:'ab-green',confirmed:'ab-green',pending:'ab-amber',cancelled:'ab-red',refunded:'ab-amber'};
+  var statusLabels={paid:'✅ 결제완료',confirmed:'✅ 결제완료',pending:'⏳ 대기중',cancelled:'❌ 취소',refunded:'↩ 환불됨'};
+  var h='';
+  r.forEach(function(tx,idx){
+    var sc=statusColors[tx.status]||'ab-green';
+    var sl=statusLabels[tx.status]||tx.status;
+    var mi=methodIcons[tx.method]||'💰';
+    h+='<tr>';
+    h+='<td style="color:rgba(255,255,255,.35);font-size:11px">'+tx.id+'</td>';
+    h+='<td>'+tx.date+'</td>';
+    h+='<td><strong>'+tx.co+'</strong><div style="font-size:11px;color:rgba(255,255,255,.3)">'+tx.email+'</div></td>';
+    h+='<td>'+tx.pkg+'</td>';
+    h+='<td>'+mi+' '+tx.method.charAt(0).toUpperCase()+tx.method.slice(1)+'</td>';
+    var isNeg = tx.status==='refunded'||tx.status==='cancelled';
+    var amtColor = isNeg ? '#F87171' : '#4ADE80';
+    var amtPrefix = isNeg ? '-' : '';
+    h+='<td>'+(isNeg?'<s style="color:rgba(255,255,255,.25)">':'')+tx.sub+(isNeg?'</s>':'')+'</td>';
+    h+='<td>'+(isNeg?'<s style="color:rgba(255,255,255,.25)">':'')+tx.tax+(isNeg?'</s>':'')+'</td>';
+    h+='<td style="color:'+amtColor+';font-weight:700">'+amtPrefix+tx.tot+'</td>';
+    h+='<td style="color:'+(isNeg?'#F87171':'#60A5FA')+';font-weight:700">'+(isNeg?'-':'')+tx.credits+'</td>';
+    h+='<td style="color:rgba(255,255,255,.4)">'+tx.usedCredits+'</td>';
+    h+='<td><span class="abadge '+sc+'">'+sl+'</span></td>';
+    h+='<td><div class="a-tbl-acts">';
+    if(tx.status==='pending'){
+      h+='<button class="abtn abtn-g" onclick="openInteracModal()">✓ Confirm</button>';
+      h+='<button class="abtn abtn-r" onclick="cancelTxn(\''+tx.id+'\')">취소</button>';
+    } else {
+      h+='<button class="abtn abtn-w" onclick="downloadInvoice(\''+tx.id+'\')">📄 Invoice</button>';
+      if(tx.status==='paid'||tx.status==='confirmed'){
+        h+='<button class="abtn abtn-r" onclick="adminRefund(\''+tx.id+'\')">💸 환불</button>';
+      }
+    }
+    h+='</div></td></tr>';
+  });
+  if(!h) h='<tr><td colspan="12" style="text-align:center;padding:28px;color:rgba(255,255,255,.2)">No results</td></tr>';
+  var tb=document.getElementById('ar-tbody'); if(tb) tb.innerHTML=h;
+}
+
+async function confirmInterac(txId) {
+  var tx=TXNS.find(function(t){return t.id===txId;});
+  if(!tx) return;
+  var mn=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  var td=new Date(); var ds=mn[td.getMonth()]+' '+td.getDate()+', '+td.getFullYear();
+
+  try {
+    // 1. DB: transaction 상태 업데이트
+    if(tx.dbId) {
+      await adminUpdateTxnStatus({tx_id: tx.dbId, status:'paid'});
+    } else if(tx.ref) {
+      await adminUpdateTxnStatus({ref: tx.ref, status:'paid'});
+    }
+
+    // 2. DB: credits 업데이트 (서버사이드 API)
+    var email = (tx.email||'').toLowerCase();
+    var auth=_getAuthForCredits();
+    await _creditsApi({action:'add', email:auth.email, pw_hash:auth.pw_hash, target_email:email, credits:(tx.credits||1)});
+
+    // 3. DB: 연결된 공고 활성화
+    if(tx.pendingJobId) {
+      await adminUpdateJobStatus(tx.pendingJobId, 'active');
+    }
+
+    // 4. 메모리 업데이트 (DB 성공 후)
+    tx.status='paid'; tx.paidAt=ds;
+    _totalCredits += (tx.credits||1);
+    syncCredits();
+    CREDIT_LEDGER.unshift({date:ds,co:tx.co,type:'purchase',credits:tx.credits,ref:tx.id+'-confirmed'});
+
+    if(tx.pendingJobId){
+      var sid=String(tx.pendingJobId);
+      for(var i=0;i<JOBS.length;i++){
+        if(String(JOBS[i].id)===sid){
+          JOBS[i].status='active';
+          for(var j=0;j<DASH_ROWS.length;j++){
+            if(String(DASH_ROWS[j].id)===sid){ DASH_ROWS[j].status='active'; break; }
+          }
+          break;
+        }
+      }
+      ALL_JOBS=JOBS.concat(JOBBANK_JOBS);
+      CREDIT_LEDGER.unshift({date:ds,co:tx.co,type:'use',credits:-1,ref:'JOB-'+sid});
+      tx.usedCredits=1;
+      for(var ei=0;ei<EMPLOYERS.length;ei++){
+        if(EMPLOYERS[ei].company===tx.co){ EMPLOYERS[ei].total=(EMPLOYERS[ei].total||0)+1; EMPLOYERS[ei].active=(EMPLOYERS[ei].active||0)+1; break; }
+      }
+    }
+    renderAdminRevenue();
+    renderAdminOverview();
+    showToast('✅ '+tx.co+' 입금 확인 — 크레딧 '+tx.credits+'개 지급 + 공고 활성화','success');
+  } catch(e) {
+    console.error('confirmInterac DB error:', e);
+    showToast('❌ 입금 확인 실패: '+e.message,'error');
+  }
+}
+
+function openAddTxnModal() {
+  document.getElementById('atxn-email').value='';
+  document.getElementById('atxn-company').value='';
+  document.getElementById('atxn-pkg').value='single';
+  document.getElementById('atxn-credits').value='1';
+  document.getElementById('atxn-amount').value='0';
+  document.getElementById('atxn-method').value='card';
+  document.getElementById('atxn-status').value='paid';
+  document.getElementById('atxn-note').value='';
+  openModal('modal-add-txn');
+}
+
+async function submitAddTxn() {
+  var email = (document.getElementById('atxn-email').value||'').trim().toLowerCase();
+  if(!email) { showToast('Please enter an email address.','warn'); return; }
+  var company = document.getElementById('atxn-company').value.trim() || email;
+  var pkg = document.getElementById('atxn-pkg').value;
+  var credits = parseInt(document.getElementById('atxn-credits').value)||1;
+  var amount = parseFloat(document.getElementById('atxn-amount').value)||0;
+  var method = document.getElementById('atxn-method').value;
+  var status = document.getElementById('atxn-status').value;
+  var note = document.getElementById('atxn-note').value.trim();
+
+  var mn=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  var td=new Date();
+  var ds=mn[td.getMonth()]+' '+td.getDate()+', '+td.getFullYear();
+  var ref='MANUAL-'+Date.now();
+  var total = amount;
+
+  try {
+    // 1. transactions 테이블에 insert
+    var txData = {
+      email: email,
+      pkg: pkg,
+      credits: credits,
+      method: method,
+      status: status,
+      amount: String(amount),
+      ref: ref,
+      created_at: new Date().toISOString()
+    };
+    var ins = await adminInsertTransaction(txData);
+    if(ins && ins.error) throw new Error(ins.error);
+
+    // 2. paid/confirmed면 크레딧 지급 (서버사이드 API)
+    if(status==='paid'||status==='confirmed') {
+      var auth=_getAuthForCredits();
+      await _creditsApi({action:'add', email:auth.email, pw_hash:auth.pw_hash, target_email:email, credits:credits});
+    }
+
+    // 3. 메모리에 추가
+    var dbId = (ins.data && ins.data[0]) ? ins.data[0].id : null;
+    TXNS.unshift({
+      id: ref, dbId: dbId, date: ds, co: company || email, email: email,
+      pkg: pkg, method: method, status: status,
+      sub: '$'+amount.toFixed(2), tax: '$0.00', tot: '$'+total.toFixed(2),
+      subNum: amount, taxNum: 0, totNum: total,
+      credits: credits, usedCredits: 0, freeCredits: method==='free'?credits:0,
+      ref: ref
+    });
+
+    if(status==='paid'||status==='confirmed') {
+      _totalCredits += credits;
+      syncCredits();
+    }
+
+    closeModal('modal-add-txn');
+    renderAdminRevenue();
+    renderAdminOverview();
+    showToast('✅ Transaction added — '+email+' / '+credits+' credits','success');
+  } catch(e) {
+    console.error('submitAddTxn error:', e);
+    showToast('❌ Failed to add transaction: '+e.message,'error');
+  }
+}
+
+async function cancelTxn(txId) {
+  var tx=TXNS.find(function(t){return t.id===txId;});
+  if(!tx) return;
+  if(!confirm((tx.co||tx.email)+'의 '+tx.id+' 거래를 취소하시겠습니까?')) return;
+  try {
+    // DB 업데이트 (dbId 또는 ref로) via admin-api
+    if(tx.dbId) {
+      var r = await adminUpdateTxnStatus({tx_id: tx.dbId, status:'cancelled'});
+      if(r && r.error) throw new Error(r.error);
+    } else if(tx.ref) {
+      var r2 = await adminUpdateTxnStatus({ref: tx.ref, status:'cancelled'});
+      if(r2 && r2.error) throw new Error(r2.error);
+    }
+    // 이미 paid/confirmed 상태였다면 크레딧 차감 (서버사이드 API)
+    if(tx.status==='paid'||tx.status==='confirmed'){
+      var email = (tx.email||'').toLowerCase();
+      var credits = tx.credits||0;
+      if(credits > 0) {
+        var auth=_getAuthForCredits();
+        await _creditsApi({action:'deduct', email:auth.email, pw_hash:auth.pw_hash, target_email:email, credits:credits});
+      }
+    }
+    tx.status='cancelled';
+    renderAdminRevenue();
+    renderAdminOverview();
+    showToast('거래 취소됨: '+tx.id,'');
+  } catch(e) {
+    console.error('Cancel DB error:', e);
+    showToast('❌ 취소 처리 실패: '+e.message,'error');
+  }
+}
+
+async function adminRefund(txId) {
+  var tx=TXNS.find(function(t){return t.id===txId;});
+  if(!tx) return;
+  if(tx.status==='refunded') { showToast('이미 환불 처리된 거래입니다.',''); return; }
+  var credits = tx.credits||0;
+  var email = (tx.email||'').toLowerCase();
+  var hasPI = tx.ref && tx.ref.indexOf('pi_') === 0;
+  var msg = (tx.co||email)+'의 '+tx.id+' 거래를 환불 처리하시겠습니까?\n크레딧 '+credits+'개가 차감됩니다.';
+  if(hasPI) msg += '\n\n💳 Stripe 자동 환불이 진행됩니다 (카드 결제 취소).';
+  else msg += '\n\n⚠️ 카드 결제가 아니므로 수동 환불이 필요합니다.';
+  if(!confirm(msg)) return;
+
+  try {
+    // 0. Stripe 자동 환불 (payment_intent가 있는 경우)
+    if(hasPI) {
+      showToast('💳 Stripe 환불 처리 중...','');
+      var _refundEmail = ''; try{ _refundEmail = localStorage.getItem('cjb_email')||''; }catch(e){}
+      // 로그인된 이메일과 localStorage 이메일 일치 확인
+      var _loggedEmail = ''; for(var _k in _ACCOUNTS) { _loggedEmail = _k; break; }
+      if(_loggedEmail && _refundEmail && _loggedEmail.toLowerCase() !== _refundEmail.toLowerCase()) {
+        showToast('Session mismatch. Please re-login.','warn'); return;
+      }
+      if(!_adminPwHash || !_refundEmail) { showToast('Admin session expired. Please re-login.','warn'); return; }
+      var stripeRes = await fetch('/api/refund', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ payment_intent: tx.ref, email: _refundEmail, pw_hash: _adminPwHash })
+      });
+      var stripeData = await stripeRes.json();
+      if(!stripeRes.ok) throw new Error('Stripe 환불 실패: ' + (stripeData.error||'Unknown error'));
+      // Stripe refund processed
+    }
+
+    // 1. transactions 상태 업데이트 via admin-api
+    var txUpdate = null;
+    var nowIso = new Date().toISOString();
+    if(tx.dbId) {
+      txUpdate = await adminUpdateTxnStatus({tx_id: tx.dbId, status:'refunded', refunded_at: nowIso});
+    } else if(tx.ref) {
+      txUpdate = await adminUpdateTxnStatus({ref: tx.ref, status:'refunded', refunded_at: nowIso});
+    }
+    if(txUpdate && txUpdate.error) throw new Error('Transaction update failed: ' + txUpdate.error);
+    if(txUpdate && (!txUpdate.transactions || txUpdate.transactions.length === 0)) {
+      console.warn('adminRefund: Transaction not found in DB (may have been purged) — continuing with refund');
+    }
+
+    // 2. credits 차감 (서버사이드 API)
+    var auth=_getAuthForCredits();
+    var deductRes = await _creditsApi({action:'deduct', email:auth.email, pw_hash:auth.pw_hash, target_email:email, credits:credits});
+
+    // 3. 잔여 크레딧 확인 → 0이면 활성 공고 자동 클로즈 (컨펌 불필요)
+    var newCredits = deductRes ? deductRes.total : 0;
+    var newUsed = deductRes ? (deductRes.used||0) : 0;
+    var remaining = newCredits - newUsed;
+    var activeUserJobs = JOBS.filter(function(j){ return (j.email||'').toLowerCase()===email && j.status==='active'; });
+    var closedCount = 0;
+
+    if(remaining <= 0 && activeUserJobs.length > 0) {
+      for(var ci=0; ci<activeUserJobs.length; ci++) {
+        var cj = activeUserJobs[ci];
+        cj.status = 'closed';
+        adminUpdateJobStatus(cj.id, 'closed').catch(function(e){ console.error('Close job error:', e); });
+        closedCount++;
+      }
+      ALL_JOBS = JOBS.concat(JOBBANK_JOBS);
+      showToast('🔒 잔여 크레딧 0 — 활성 공고 '+closedCount+'건 자동 클로즈','');
+    }
+
+    // 4. 사용자에게 환불 알림 이메일
+    _ejsSend(EJS_TPL_GENERAL, {
+      to_email: email, to_name: tx.co || email,
+      subject: 'Refund Processed — YouthHire',
+      heading: '💸 Refund Processed',
+      message: 'Your payment of ' + tx.tot + ' for ' + tx.pkg + ' has been refunded. ' + credits + ' credit(s) have been removed from your account.' + (closedCount>0 ? ' Your '+closedCount+' active job posting(s) have been automatically closed due to insufficient credits.' : '') + ' If you have any questions, please contact us.',
+      button_text: 'Go to Dashboard',
+    }).catch(function(){});
+
+    // 5. 메모리 업데이트 (DB 성공 후에만)
+    tx.status='refunded';
+    tx.refunded_at = new Date().toISOString();
+    tx.refundDate = (function(){ var rd=new Date(); var mn=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']; return mn[rd.getMonth()]+' '+rd.getDate()+', '+rd.getFullYear()+' '+String(rd.getHours()).padStart(2,'0')+':'+String(rd.getMinutes()).padStart(2,'0'); })();
+    _totalCredits = Math.max(0, _totalCredits - credits);
+    syncCredits();
+    renderAdminRevenue();
+    renderAdminOverview();
+    renderAdminJobs();
+    var refMsg = hasPI ? '💳 Stripe 카드 환불 + 크레딧 '+credits+'개 차감 완료' : '💸 크레딧 '+credits+'개 차감 완료 (수동 환불 필요)';
+    showToast(refMsg + ' — ' + tx.id, 'success');
+
+  } catch(e) {
+    console.error('Refund DB error:', e);
+    showToast('❌ 환불 처리 실패: '+e.message,'error');
+  }
+}
+
+function downloadInvoice(txId, type) {
+  var tx=TXNS.find(function(t){return t.id===txId;});
+  if(!tx) return;
+  var isRefund = type === 'refund';
+  var refNum = tx.id.replace('INV-','REF-');
+  var cardLast4 = (tx.card_last4) ? 'Card ending **** ' + tx.card_last4 : (tx.method==='card' ? 'Stripe Card Payment' : tx.method||'N/A');
+
+  // 결제 섹션 (항상 포함)
+  var lines=[
+    'YouthHire',
+    'canadayouthhire.ca',
+    '════════════════════════════════',
+    '',
+    '[ PAYMENT INVOICE ]',
+    'Invoice #:    ' + tx.id,
+    'Date:         ' + tx.date,
+    '',
+    'Customer:     ' + tx.email,
+    'Payment:      ' + cardLast4,
+    'Reference:    ' + (tx.ref || 'N/A'),
+    '',
+    'Package:      ' + tx.pkg,
+    'Credits:      ' + tx.credits,
+    '────────────────────────────────',
+    'Subtotal:     ' + tx.sub,
+    'Tax:          ' + tx.tax,
+    'Total Paid:   ' + tx.tot,
+    '════════════════════════════════',
+  ];
+
+  // 환불 섹션 (환불된 경우만 추가)
+  if (tx.status === 'refunded') {
+    lines.push('');
+    lines.push('[ REFUND INVOICE ]');
+    lines.push('Refund #:     ' + refNum);
+    lines.push('Refund Date:  ' + (tx.refundDate || tx.date));
+    lines.push('');
+    lines.push('Customer:     ' + tx.email);
+    lines.push('Refund to:    ' + cardLast4);
+    lines.push('Reference:    ' + (tx.ref || 'N/A'));
+    lines.push('');
+    lines.push('Package:      ' + tx.pkg);
+    lines.push('Credits:      -' + tx.credits);
+    lines.push('────────────────────────────────');
+    lines.push('Total Refund: -' + tx.tot);
+    lines.push('════════════════════════════════');
+    lines.push('');
+    lines.push('Net Amount:   CA$0.00');
+  }
+
+  lines.push('');
+  lines.push('Contains information licensed under the');
+  lines.push('Open Government Licence — Canada.');
+  lines.push('© 2026 YouthHire. All rights reserved.');
+
+  var text = lines.join('\n');
+  var blob=new Blob([text],{type:'text/plain'});
+  var url=URL.createObjectURL(blob);
+  var a=document.createElement('a'); a.href=url;
+  var fileName = isRefund ? refNum : tx.id;
+  a.download=fileName+'.txt';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast('📄 Invoice downloaded: '+fileName,'success');
+}
+
+// ═══ 수동 거래 추가 ═══
+function openManualTxnModal() {
+  var modal=document.getElementById('manual-txn-modal');
+  if(!modal) return;
+  // 고용주 목록 채우기
+  var sel=document.getElementById('mt-employer');
+  if(sel){
+    sel.innerHTML='<option value="">— 고용주 선택 —</option>';
+    EMPLOYERS.forEach(function(a){
+      var opt=document.createElement('option');
+      opt.value=a.email; opt.textContent=(a.company||a.name||'')+ ' ('+a.email+')';
+      sel.appendChild(opt);
+    });
+  }
+  // 필드 초기화
+  var pkgSel=document.getElementById('mt-pkg'); if(pkgSel) pkgSel.value='single';
+  var mtMethod=document.getElementById('mt-method'); if(mtMethod) mtMethod.value='card';
+  var mtStatus=document.getElementById('mt-status'); if(mtStatus) mtStatus.value='paid';
+  var mtRef=document.getElementById('mt-ref'); if(mtRef) mtRef.value='';
+  var mtNote=document.getElementById('mt-note'); if(mtNote) mtNote.value='';
+  var cf=document.getElementById('mt-custom-fields'); if(cf) cf.style.display='none';
+  modal.classList.add('open');
+}
+function closeManualTxnModal() {
+  var modal=document.getElementById('manual-txn-modal');
+  if(modal) modal.classList.remove('open');
+}
+function mtPkgChanged() {
+  var v=(document.getElementById('mt-pkg')||{}).value;
+  var cf=document.getElementById('mt-custom-fields');
+  if(cf) cf.style.display=(v==='custom')?'block':'none';
+}
+async function doManualTxn() {
+  var email=(document.getElementById('mt-employer')||{}).value;
+  if(!email){ showToast('⚠️ 고용주를 선택하세요','warn'); return; }
+  var pkgKey=(document.getElementById('mt-pkg')||{}).value;
+  var method=(document.getElementById('mt-method')||{}).value||'card';
+  var status=(document.getElementById('mt-status')||{}).value||'paid';
+  var ref=(document.getElementById('mt-ref')||{}).value.trim();
+  var note=(document.getElementById('mt-note')||{}).value.trim();
+
+  var sub=0, tax=0, tot=0, credits=1, pkgName='';
+  if(pkgKey==='custom'){
+    sub=parseFloat((document.getElementById('mt-sub')||{}).value)||0;
+    tax=parseFloat((document.getElementById('mt-tax')||{}).value)||0;
+    tot=sub+tax;
+    credits=parseInt((document.getElementById('mt-credits')||{}).value)||1;
+    pkgName='Custom ('+credits+' credits)';
+  } else {
+    var pkg=PKGS[pkgKey]||PKGS.single;
+    sub=parseFloat((pkg.price||'$0').replace('$',''))||0;
+    tax=parseFloat((pkg.tax||'$0').replace('$',''))||0;
+    tot=parseFloat((pkg.total||'$0').replace('$',''))||0;
+    credits=pkg.credits||1;
+    pkgName=pkg.name||pkg.key;
+  }
+
+  if(!confirm(email+'에 수동 거래를 추가합니다.\n패키지: '+pkgName+'\n금액: $'+tot.toFixed(2)+'\n크레딧: '+credits+'개\n\n진행하시겠습니까?')) return;
+
+  try {
+    var mn=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    var now=new Date();
+    var ds=mn[now.getMonth()]+' '+now.getDate()+', '+now.getFullYear();
+    var invId='MANUAL-'+String(Date.now()).slice(-6);
+
+    // 1. transactions DB에 저장 (via admin-api)
+    var txInsert = await adminInsertTransaction({
+      email: email.toLowerCase(),
+      pkg: pkgKey,
+      amount: String(tot),
+      credits: credits,
+      method: method,
+      status: status,
+      ref: ref || ('manual_'+Date.now()),
+      note: note || ('수동 추가 by admin')
+    });
+    if(txInsert && txInsert.error) throw new Error('Transaction insert failed: '+txInsert.error);
+
+    // 2. credits 업데이트 (paid/confirmed만, 서버사이드 API)
+    if(status==='paid'||status==='confirmed'){
+      var auth=_getAuthForCredits();
+      await _creditsApi({action:'add', email:auth.email, pw_hash:auth.pw_hash, target_email:email.toLowerCase(), credits:credits});
+    }
+
+    // 3. 메모리에 추가
+    var dbId = txInsert.data && txInsert.data[0] ? txInsert.data[0].id : null;
+    TXNS.unshift({
+      id: invId, dbId: dbId, date: ds, paidAt: (status==='paid'||status==='confirmed')?ds:null,
+      co: (EMPLOYERS.find(function(a){return a.email===email})||{}).company||email,
+      email: email, pkg: pkgName, sub: '$'+sub.toFixed(2), tax: '$'+tax.toFixed(2), tot: '$'+tot.toFixed(2),
+      subNum: sub, taxNum: tax, totNum: tot, method: method, status: status,
+      credits: credits, usedCredits: 0, freeCredits: 0, ref: ref, note: note||'수동 추가'
+    });
+
+    renderAdminRevenue(); renderAdminOverview();
+    closeManualTxnModal();
+    showToast('✅ 수동 거래 추가 완료: '+invId+' (크레딧 '+credits+'개 지급)','success');
+  } catch(e) {
+    console.error('Manual txn error:', e);
+    showToast('❌ Failed to add transaction: '+e.message,'error');
+  }
+}
+
+// 무료 크레딧 지급 모달
+function openGiveCreditsModal() {
+  var modal=document.getElementById('give-credits-modal');
+  if(!modal) return;
+  // Populate employer dropdown
+  var sel=document.getElementById('gc-employer');
+  if(sel){
+    sel.innerHTML='<option value="">Select employer…</option>';
+    EMPLOYERS.forEach(function(e){
+      sel.innerHTML+='<option value="'+e.company+'">'+e.company+' ('+e.email+')</option>';
+    });
+  }
+  document.getElementById('gc-amount').value='1';
+  document.getElementById('gc-reason').value='';
+  modal.classList.add('open');
+}
+function closeGiveCreditsModal(){
+  var m=document.getElementById('give-credits-modal'); if(m) m.classList.remove('open');
+}
+function doGiveCredits(){
+  var co=(document.getElementById('gc-employer')||{value:''}).value;
+  var amt=parseInt((document.getElementById('gc-amount')||{value:'1'}).value)||1;
+  var reason=(document.getElementById('gc-reason')||{value:''}).value.trim()||'Admin 지급';
+  if(!co){ showToast('⚠️ 고용주를 선택하세요','warn'); return; }
+  if(amt<1||amt>100){ showToast('⚠️ 1~100 사이로 입력하세요','warn'); return; }
+  var emp=EMPLOYERS.find(function(e){return e.company===co;});
+  var mn=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  var td=new Date(); var ds=mn[td.getMonth()]+' '+td.getDate()+', '+td.getFullYear();
+  var fid='FREE-'+String(Date.now()).slice(-5);
+  TXNS.unshift({
+    id:fid,date:ds,paidAt:ds,co:co,email:emp?emp.email:'',
+    pkg:'Free Credits ('+amt+')',sub:'$0.00',tax:'$0.00',tot:'$0.00',
+    subNum:0,taxNum:0,totNum:0,method:'free',status:'paid',
+    credits:amt,usedCredits:0,freeCredits:amt,note:reason
+  });
+  CREDIT_LEDGER.unshift({date:ds,co:co,type:'free',credits:amt,ref:fid});
+  closeGiveCreditsModal();
+  renderAdminRevenue();
+  showToast('🎁 '+co+'에 크레딧 '+amt+'개 지급 완료','success');
+}
+
+// 계좌이체 수동 등록 모달
+function openInteracModal(){
+  var modal=document.getElementById('interac-modal');
+  if(!modal) return;
+  renderInteracPendingList();
+  modal.classList.add('open');
+}
+
+function renderInteracPendingList(){
+  var list=document.getElementById('interac-pending-list');
+  if(!list) return;
+
+  // interac/paypal pending 상태 TXNS
+  var pending=TXNS.filter(function(tx){
+    return (tx.method==='interac'||tx.method==='paypal') && tx.status==='pending';
+  });
+
+  if(!pending.length){
+    list.innerHTML='<div style="text-align:center;padding:40px 20px;color:rgba(255,255,255,.3);font-size:14px">✅ No pending payments</div>';
+    return;
+  }
+
+  var h='';
+  pending.forEach(function(tx){
+    var methodLabel = tx.method==='interac'?'🏦 Interac':'🅿 PayPal';
+    var txId = "'"+tx.id+"'";
+    h+='<div style="padding:16px 20px;border-bottom:1px solid rgba(255,255,255,.07)">';
+    h+='<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px">';
+    h+='<div style="flex:1">';
+    h+='<div style="font-weight:700;color:#fff;font-size:14px;margin-bottom:2px">'+tx.co+'</div>';
+    h+='<div style="font-size:12px;color:rgba(255,255,255,.4);margin-bottom:6px">'+tx.email+'</div>';
+    h+='<div style="display:flex;gap:8px;flex-wrap:wrap">';
+    h+='<span style="font-size:11px;font-weight:700;color:#FBB924">'+methodLabel+'</span>';
+    h+='<span style="font-size:11px;color:rgba(255,255,255,.5)">'+tx.pkg+'</span>';
+    h+='<span style="font-size:11px;color:#4ADE80;font-weight:700">'+tx.tot+' → '+tx.credits+' credits</span>';
+    h+='<span style="font-size:11px;color:rgba(255,255,255,.3)">'+tx.date+'</span>';
+    h+='</div>';
+    h+='</div>';
+    h+='<button class="abtn abtn-g" style="flex-shrink:0;font-size:12px" onclick="confirmInteracFromModal('+txId+')">✓ Confirm</button>';
+    h+='</div>';
+    h+='</div>';
+  });
+
+  list.innerHTML=h;
+}
+
+function confirmInteracFromModal(txId){
+  var tx = TXNS.find(function(t){ return String(t.id)===String(txId); });
+  if(!tx){ showToast('⚠️ Transaction not found.','warn'); return; }
+  showConfirm(
+    'Confirm Payment',
+    'Confirm payment from <strong>'+tx.co+'</strong>?<br><br>'+
+    '<span style="color:#4ADE80;font-weight:700">'+tx.tot+' → '+tx.credits+' credits</span> will be distributed immediately.',
+    'Confirm & Distribute','btn-primary'
+  ).then(async function(ok){
+    if(!ok) return;
+    var mn=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    var td=new Date(); var ds=mn[td.getMonth()]+' '+td.getDate()+', '+td.getFullYear();
+
+    try {
+      // 1. DB: transaction 상태 업데이트
+      if(tx.dbId) {
+        await adminUpdateTxnStatus({tx_id: tx.dbId, status:'paid'});
+      } else if(tx.ref) {
+        await adminUpdateTxnStatus({ref: tx.ref, status:'paid'});
+      }
+
+      // 2. DB: credits 업데이트 (서버사이드 API)
+      var email = (tx.email||'').toLowerCase();
+      var auth=_getAuthForCredits();
+      await _creditsApi({action:'add', email:auth.email, pw_hash:auth.pw_hash, target_email:email, credits:(tx.credits||1)});
+
+      // 3. DB: 연결된 공고 활성화
+      if(tx.pendingJobId) {
+        await adminUpdateJobStatus(tx.pendingJobId, 'active');
+      }
+
+      // 4. 메모리 업데이트 (DB 성공 후)
+      tx.status='paid'; tx.paidAt=ds;
+      _totalCredits += (tx.credits||1);
+      syncCredits();
+      CREDIT_LEDGER.unshift({date:ds,co:tx.co,type:'purchase',credits:tx.credits,ref:tx.id+'-confirmed'});
+      if(tx.pendingJobId){
+        var sid=String(tx.pendingJobId);
+        JOBS.forEach(function(j){ if(String(j.id)===sid){ j.status='active'; } });
+        DASH_ROWS.forEach(function(r){ if(String(r.id)===sid){ r.status='active'; } });
+        ALL_JOBS=JOBS.concat(JOBBANK_JOBS);
+        CREDIT_LEDGER.unshift({date:ds,co:tx.co,type:'use',credits:-1,ref:'JOB-'+sid});
+        tx.usedCredits=1;
+        EMPLOYERS.forEach(function(e){ if(e.company===tx.co){ e.total=(e.total||0)+1; e.active=(e.active||0)+1; } });
+      }
+      showToast('✅ '+tx.co+' — '+tx.credits+' credits distributed!','success');
+      renderInteracPendingList();
+      renderAdminRevenue();
+      renderAdminOverview();
+      var remaining=TXNS.filter(function(t){
+        return (t.method==='interac'||t.method==='paypal') && t.status==='pending';
+      }).length;
+      if(remaining===0) closeInteracModal();
+    } catch(e) {
+      console.error('confirmInteracFromModal DB error:', e);
+      showToast('❌ 입금 확인 실패: '+e.message,'error');
+    }
+  });
+}
+
+function closeInteracModal(){ var m=document.getElementById('interac-modal'); if(m) m.classList.remove('open'); }
+
+// 구버전 호환용 (수익 탭 테이블에서 직접 호출하는 경우)
+function doRegisterInterac(){
+  showToast('Use the Pending Payments panel to confirm payments.','warn');
+}
+function renderAdminOverview() {
+  var activeJobs = ALL_JOBS.filter(function(j){return j.status==='active';}).length;
+  var reviewJobs = JOBS.filter(function(j){return j.status==='pending_review';}).length;
+  var totalRevenue = TXNS.reduce(function(sum,tx){return sum+((tx.status==='paid'||tx.status==='confirmed')&&tx.status!=='refunded'?tx.totNum:0);},0);
+  var pendingReports = ISSUE_JOBS.filter(function(i){return i.status==='pending';}).length;
+
+  // 미지급 크레딧 (pending 상태 = 입금 확인 대기)
+  var pendingTxns = TXNS.filter(function(tx){ return tx.status==='pending'; });
+  var pendingCount = pendingTxns.length;
+  var pendingAmt = pendingTxns.reduce(function(s,tx){ return s+tx.totNum; }, 0);
+  var refundedCount = TXNS.filter(function(tx){ return tx.status==='refunded'; }).length;
+  var refundedAmt = TXNS.filter(function(tx){ return tx.status==='refunded'; }).reduce(function(s,tx){ return s+tx.totNum; }, 0);
+  var cancelledCount = TXNS.filter(function(tx){ return tx.status==='cancelled'; }).length;
+
+  var el;
+  el=document.getElementById('ao-active'); if(el) el.textContent=activeJobs;
+  el=document.getElementById('ao-employers'); if(el) el.textContent=EMPLOYERS.length;
+  el=document.getElementById('ao-revenue'); if(el) el.textContent='$'+totalRevenue.toFixed(2);
+  el=document.getElementById('ao-revenue-trend'); if(el) el.textContent=refundedCount>0?'↩ '+refundedCount+'건 환불 ($'+refundedAmt.toFixed(2)+')':'';
+  el=document.getElementById('ao-reports'); if(el) el.textContent=pendingReports;
+  el=document.getElementById('ao-reports-trend'); if(el) el.textContent=pendingReports>0?'Needs action':'All clear ✅';
+  el=document.getElementById('ao-txns'); if(el) el.textContent=TXNS.length+(cancelledCount>0?' (취소 '+cancelledCount+')':'');
+  el=document.getElementById('ao-pending-cnt'); if(el) el.textContent=pendingCount;
+  el=document.getElementById('ao-pending-amt'); if(el) el.textContent=pendingCount>0?'$'+pendingAmt.toFixed(2)+' 대기':'없음 ✅';
+  el=document.getElementById('atb-jobs-cnt'); if(el) el.textContent=activeJobs;
+
+  // Revenue chart — 실제 데이터 기반 (최근 6개월)
+  var mn6=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  var now6=new Date(), monthData={};
+  for(var mi=5;mi>=0;mi--){
+    var d6=new Date(now6.getFullYear(),now6.getMonth()-mi,1);
+    var key6=d6.getFullYear()+'-'+String(d6.getMonth()+1).padStart(2,'0');
+    monthData[key6]={label:mn6[d6.getMonth()],revenue:0,refunded:0,cancelled:0};
+  }
+  TXNS.forEach(function(tx){
+    var dp=tx.date.replace(',','').split(' ');
+    if(dp.length>=3){
+      var mIdx=mn6.indexOf(dp[0]); if(mIdx<0) return;
+      var ym=dp[2]+'-'+String(mIdx+1).padStart(2,'0');
+      if(monthData[ym]){
+        if(tx.status==='paid'||tx.status==='confirmed') monthData[ym].revenue+=tx.totNum||0;
+        else if(tx.status==='refunded') monthData[ym].refunded+=tx.totNum||0;
+        else if(tx.status==='cancelled') monthData[ym].cancelled+=tx.totNum||0;
+      }
+    }
+  });
+  var months=[],vals=[];
+  Object.keys(monthData).sort().forEach(function(k){months.push(monthData[k].label);vals.push(monthData[k].revenue);});
+  var mx=Math.max.apply(null,vals.concat([1])), bars='', lbls='';
+  months.forEach(function(m,i){
+    var pct=Math.round((vals[i]/mx)*100);
+    bars+='<div class="rev-bar-c"><div class="rev-bar" style="height:'+pct+'%" title="$'+vals[i].toFixed(2)+'"></div></div>';
+    lbls+='<span class="rev-lbl">'+m+'</span>';
+  });
+  var rc=document.getElementById('ao-rev-chart'); if(rc) rc.innerHTML=bars;
+  var rl=document.getElementById('ao-rev-labels'); if(rl) rl.innerHTML=lbls;
+  // Attention - 동적 계산
+  var attn=[];
+  if(reviewJobs>0) attn.push({c:'#FBB924',title:'공고 '+reviewJobs+'건 검토 대기',sub:'관리자 승인 필요',tab:'jobs'});
+  if(pendingCount>0) attn.push({c:'#60A5FA',title:'입금 대기 '+pendingCount+'건',sub:'$'+pendingAmt.toFixed(2)+' 크레딧 미지급',tab:'revenue'});
+  if(pendingReports>0) attn.push({c:'#F87171',title:'이슈 공고 '+pendingReports+'건 검토 대기',sub:'관리자 검토 필요',tab:'reports'});
+  if(!attn.length) attn.push({c:'#4ADE80',title:'처리 필요 없음',sub:'모든 항목 정상 ✅',tab:'overview'});
+  var ah='';
+  attn.forEach(function(a){
+    ah+='<div class="attn-item" onclick="aTab(\''+a.tab+'\',document.getElementById(\'atb-'+a.tab+'\'))">';
+    ah+='<div class="attn-dot" style="background:'+a.c+'"></div>';
+    ah+='<div class="attn-content"><div class="attn-title">'+a.title+'</div><div class="attn-sub">'+a.sub+'</div></div>';
+    ah+='<div class="attn-arrow">›</div></div>';
+  });
+  var al=document.getElementById('ao-attn'); if(al) al.innerHTML=ah;
+  // Activity — 실제 데이터 기반
+  var acts=[];
+  var nowMs=Date.now();
+  function timeAgo(dateStr){
+    var dp=dateStr.replace(',','').split(' ');
+    var mn7=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    if(dp.length<3)return dateStr;
+    var d7=new Date(parseInt(dp[2]),mn7.indexOf(dp[0]),parseInt(dp[1]));
+    var diff=nowMs-d7.getTime(); var h7=Math.floor(diff/3600000);
+    if(h7<1)return 'just now'; if(h7<24)return h7+'h ago'; var d8=Math.floor(h7/24); if(d8<30)return d8+'d ago'; return dateStr;
+  }
+  // 최근 거래
+  TXNS.slice(0,5).forEach(function(tx){
+    var isPaid=tx.status==='paid'||tx.status==='confirmed';
+    var isRef=tx.status==='refunded'; var isCan=tx.status==='cancelled';
+    var col=isPaid?'#FBB924':isRef?'#F87171':isCan?'#F87171':'#60A5FA';
+    var txt=isPaid?'<strong>'+tx.co+'</strong> purchased '+tx.pkg+' · '+tx.tot:
+      isRef?'↩ Refund: <strong>'+tx.co+'</strong> · '+tx.tot:
+      isCan?'❌ Cancelled: <strong>'+tx.co+'</strong> · '+tx.tot:
+      '⏳ Pending: <strong>'+tx.co+'</strong> · '+tx.tot;
+    acts.push({c:col,t:txt,tm:timeAgo(tx.date)});
+  });
+  // 최근 공고
+  JOBS.slice(0,3).forEach(function(j){
+    acts.push({c:'#4ADE80',t:'<strong>'+(j.company||'')+'</strong> posted '+(j.title||'Job'),tm:timeAgo(j.date||'')});
+  });
+  // 최근 고용주
+  EMPLOYERS.slice(0,2).forEach(function(e){
+    acts.push({c:'#60A5FA',t:'신규 고용주: <strong>'+(e.company||e.email)+'</strong>',tm:timeAgo(e.joined||'')});
+  });
+  acts.sort(function(a,b){return a.tm.localeCompare(b.tm);}); // rough sort
+  var acth='';
+  acts.slice(0,8).forEach(function(a){
+    acth+='<div class="act-row"><div class="act-dot" style="background:'+a.c+'"></div><div class="act-txt">'+a.t+'</div><div class="act-time">'+a.tm+'</div></div>';
+  });
+  if(!acth) acth='<div style="text-align:center;color:rgba(255,255,255,.2);padding:20px">No activity yet</div>';
+  var af=document.getElementById('ao-activity'); if(af) af.innerHTML=acth;
+}
+
+function showRevPendingCredits() { openInteracModal(); }
+function showRevPendingPanel() { openInteracModal(); }
+function showPendingCredits() { openInteracModal(); }
+function goToPendingRevenue() { openInteracModal(); }
+function showRevGapPanel() { openInteracModal(); }
+
+// ===== ADMIN IMPROVEMENTS =====
+
+function ajmTab(name) {
+  var cp = document.getElementById('ajm-pane-content');
+  var hp = document.getElementById('ajm-pane-history');
+  var tb1 = document.getElementById('ajm-tab-content');
+  var tb2 = document.getElementById('ajm-tab-history');
+  if(name === 'content') {
+    if(cp) cp.style.display = ''; if(hp) hp.style.display = 'none';
+    if(tb1){ tb1.style.borderBottomColor='#60A5FA'; tb1.style.color='#fff'; tb1.style.opacity='1'; }
+    if(tb2){ tb2.style.borderBottomColor='transparent'; tb2.style.color='rgba(255,255,255,.4)'; }
+  } else {
+    if(cp) cp.style.display = 'none'; if(hp) hp.style.display = '';
+    if(tb2){ tb2.style.borderBottomColor='#60A5FA'; tb2.style.color='#fff'; tb2.style.opacity='1'; }
+    if(tb1){ tb1.style.borderBottomColor='transparent'; tb1.style.color='rgba(255,255,255,.4)'; }
+  }
+}
+
+function adminViewJob(id) {
+  var j = JOBS.find(function(x){return String(x.id)===String(id);});
+  if(!j) return;
+  var modal = document.getElementById('admin-job-modal');
+  if(!modal) return;
+  ajmTab('content');
+  document.getElementById('ajm-title').textContent = '📋 ' + j.title;
+  document.getElementById('ajm-position').textContent = j.title;
+  document.getElementById('ajm-company').textContent = j.company || '—';
+  document.getElementById('ajm-account').textContent = j.postedByEmail || '(등록 계정 정보 없음)';
+  document.getElementById('ajm-acc-company').textContent = j.postedByAccCompany || '—';
+  document.getElementById('ajm-loc').textContent = j.loc || '—';
+  document.getElementById('ajm-biz-loc').textContent = j.bizCity ? (j.bizCity + (j.bizProv ? ', '+j.bizProv : '')) : '—';
+  document.getElementById('ajm-type').textContent = j.type || '—';
+  document.getElementById('ajm-salary').textContent = j.salary || '—';
+  document.getElementById('ajm-lang').textContent = j.lang || '—';
+  document.getElementById('ajm-edu').textContent = j.edu || '—';
+  document.getElementById('ajm-exp-req').textContent = j.expReq || '—';
+  document.getElementById('ajm-apply').textContent = j.applyMethod==='url' ? ('URL: '+(j.applyUrl||'—')) : ('Email: '+(j.email||'—'));
+  document.getElementById('ajm-cat').textContent = j.cat || '—';
+  var statusMap = {active:'🟢 활성',expired:'⏰ 만료(자동)',closed:'⛔ 수동마감',pending_review:'📋 검토대기',pending_payment:'⏳ 결제대기',deleted:'🗑 삭제됨'};
+  document.getElementById('ajm-status').textContent = statusMap[j.status] || j.status;
+  var descEl = document.getElementById('ajm-desc');
+  if(descEl) descEl.textContent = j.desc || '(설명 없음)';
+  var closeBtn = document.getElementById('ajm-close-btn');
+  var reopenBtn = document.getElementById('ajm-reopen-btn');
+  var delBtn = document.getElementById('ajm-delete-btn');
+  if(closeBtn) closeBtn.style.display = j.status==='active' ? 'inline-flex' : 'none';
+  if(reopenBtn) reopenBtn.style.display = j.status!=='active' ? 'inline-flex' : 'none';
+  if(closeBtn) closeBtn.onclick = function(){ if(confirm('Close this job posting? It will no longer appear in search results.')){ adminCloseJob(id); closeAdminJobModal(); } };
+  if(reopenBtn) reopenBtn.onclick = function(){ adminReopenJob(id); closeAdminJobModal(); };
+  if(delBtn) delBtn.onclick = function(){ if(confirm('Permanently delete this job posting? This cannot be undone.')){ adminDeleteJob(id); closeAdminJobModal(); } };
+  modal.classList.add('open');
+}
+
+function adminViewJobHistory(id) {
+  var j = JOBS.find(function(x){return String(x.id)===String(id);});
+  if(!j) return;
+  var modal = document.getElementById('admin-job-modal');
+  if(!modal) return;
+  // 공고 내용 탭도 채워두기
+  adminViewJob(id);
+  // 세부사항 탭으로 전환
+  ajmTab('history');
+  document.getElementById('ajmh-id').textContent = '#' + j.id;
+  document.getElementById('ajmh-posted').textContent = j.date || '—';
+  document.getElementById('ajmh-exp').textContent = j.exp || '—';
+  var statusMap = {active:'🟢 활성',expired:'⏰ 만료(자동)',closed:'⛔ 수동마감',pending_review:'📋 검토대기',pending_payment:'⏳ 결제대기',deleted:'🗑 삭제됨'};
+  document.getElementById('ajmh-status').textContent = statusMap[j.status] || j.status;
+  // 변경 이력 생성
+  var log = j.statusLog || [];
+  var h = '';
+  // 기본 등록 이벤트
+  h += '<div style="display:flex;gap:10px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.06)">';
+  h += '<span style="color:#4ADE80;font-size:11px;min-width:110px">'+j.date+'</span>';
+  h += '<span style="color:rgba(255,255,255,.7)">📝 공고 등록 — <strong style="color:#fff">'+j.title+'</strong> ('+j.company+')</span></div>';
+  // 상태 변경 이력
+  log.forEach(function(entry){
+    var icon = entry.action==='closed'?'⛔':entry.action==='reopened'?'🟢':entry.action==='expired'?'⏰':entry.action==='edited'?'✏️':'📌';
+    var label = entry.action==='closed'?'수동 마감':entry.action==='reopened'?'재오픈':entry.action==='expired'?'자동 만료':entry.action==='edited'?'내용 수정':'변경';
+    h += '<div style="display:flex;gap:10px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.06)">';
+    h += '<span style="color:rgba(255,255,255,.35);font-size:11px;min-width:110px">'+(entry.date||'—')+'</span>';
+    h += '<span style="color:rgba(255,255,255,.7)">'+icon+' '+label;
+    if(entry.detail) h += ' — <span style="color:rgba(255,255,255,.45)">'+entry.detail+'</span>';
+    h += '</span></div>';
+  });
+  if(!log.length && j.status !== 'active') {
+    h += '<div style="padding:6px 0;color:rgba(255,255,255,.3);font-size:12px">추가 변경 이력 없음</div>';
+  }
+  var logEl = document.getElementById('ajmh-log');
+  if(logEl) logEl.innerHTML = h || '<div style="color:rgba(255,255,255,.3);font-size:12px">이력 없음</div>';
+}
+
+function closeAdminJobModal() {
+  var m = document.getElementById('admin-job-modal'); if(m) m.classList.remove('open');
+}
+
+var _creditFilter = 'all';
+var _selectedCreditEmails = new Set();
+
+function setCreditFilter(filter, btn) {
+  _creditFilter = filter;
+  _selectedCreditEmails.clear();
+  document.querySelectorAll('#ap-credits .abtn[id^="crtab-"]').forEach(function(b){
+    b.style.opacity='.6'; b.style.borderBottom='none'; b.style.fontWeight='600';
+  });
+  if(btn){ btn.style.opacity='1'; btn.style.borderBottom='2px solid #fff'; btn.style.fontWeight='700'; }
+  renderAdminCredits();
+}
+
+function toggleSelectAllCredits(checked) {
+  var cbs = document.querySelectorAll('.acr-row-check');
+  cbs.forEach(function(cb){
+    cb.checked = checked;
+    var em = cb.dataset.email;
+    if(checked) _selectedCreditEmails.add(em);
+    else _selectedCreditEmails.delete(em);
+  });
+  updateBulkGiftBtn();
+}
+
+function toggleCreditRow(cb) {
+  var em = cb.dataset.email;
+  if(cb.checked) _selectedCreditEmails.add(em);
+  else _selectedCreditEmails.delete(em);
+  updateBulkGiftBtn();
+}
+
+function updateBulkGiftBtn() {
+  var n = _selectedCreditEmails.size;
+  var btn = document.getElementById('acr-bulk-gift-btn');
+  var cnt = document.getElementById('acr-selected-count');
+  if(btn) btn.style.display = n>0 ? '' : 'none';
+  if(cnt) cnt.textContent = n;
+}
+
+function setGiftAmt(n) {
+  var inp = document.getElementById('gcm-amount');
+  if(inp) inp.value = n;
+  [1,3,5,10].forEach(function(v){
+    var b = document.getElementById('gcm-btn-'+v);
+    if(b) b.style.background = v===n ? 'rgba(74,222,128,.2)' : '';
+  });
+}
+
+function setBulkGiftAmt(n) {
+  var inp = document.getElementById('bgm-amount');
+  if(inp) inp.value = n;
+  [1,3,5,10].forEach(function(v){
+    var b = document.getElementById('bgm-btn-'+v);
+    if(b) b.style.background = v===n ? 'rgba(74,222,128,.2)' : '';
+  });
+}
+
+function openGiftCreditsModal(email, company) {
+  var modal = document.getElementById('gift-credits-modal');
+  if(!modal) return;
+  document.getElementById('gcm-target-name').textContent = company||email;
+  document.getElementById('gcm-target-email').textContent = email;
+  modal._targetEmail = email;
+  modal._targetCompany = company;
+  var inp = document.getElementById('gcm-amount'); if(inp) inp.value=1;
+  var note = document.getElementById('gcm-note'); if(note) note.value='';
+  setGiftAmt(1);
+  modal.classList.add('open');
+}
+function closeGiftCreditsModal() {
+  var m=document.getElementById('gift-credits-modal'); if(m) m.classList.remove('open');
+}
+
+function openBulkGiftModal() {
+  if(_selectedCreditEmails.size===0){ showToast('먼저 회원을 선택하세요','warn'); return; }
+  var modal = document.getElementById('bulk-gift-modal');
+  if(!modal) return;
+  var cnt = document.getElementById('bgm-count');
+  if(cnt) cnt.textContent = _selectedCreditEmails.size;
+  var list = document.getElementById('bgm-target-list');
+  if(list){
+    var rows = _buildCreditRows();
+    var html = '';
+    _selectedCreditEmails.forEach(function(em){
+      var r = rows.find(function(x){ return x.email.toLowerCase()===em.toLowerCase(); });
+      html += '<div>🏢 '+(r?r.company:em)+' <span style="color:rgba(255,255,255,.3);font-size:11px">('+em+')</span></div>';
+    });
+    list.innerHTML = html;
+  }
+  var inp = document.getElementById('bgm-amount'); if(inp) inp.value=1;
+  var note = document.getElementById('bgm-note'); if(note) note.value='';
+  setBulkGiftAmt(1);
+  modal.classList.add('open');
+}
+function closeBulkGiftModal() {
+  var m=document.getElementById('bulk-gift-modal'); if(m) m.classList.remove('open');
+}
+
+async function doGiftCredits() {
+  var modal = document.getElementById('gift-credits-modal');
+  var email = modal._targetEmail;
+  var company = modal._targetCompany;
+  var amt = parseInt((document.getElementById('gcm-amount')||{value:'1'}).value)||1;
+  var note = (document.getElementById('gcm-note')||{value:''}).value.trim()||'Admin credit gift';
+  if(!email){ showToast('⚠️ 오류','warn'); return; }
+  if(amt<1||amt>100){ showToast('⚠️ 1~100개 사이로 입력하세요','warn'); return; }
+  await _giftCreditsTo(email, company, amt, note);
+  // EmailJS 크레딧 선물 이메일 발송
+  dbGetAccount(email).then(function(acct) {
+    sendGiftEmail(email, acct ? acct.name : email, company, amt, note);
+  });
+  closeGiftCreditsModal();
+  renderAdminCredits();
+  renderAdminRevenue();
+  showToast('🎁 '+company+' 에 크레딧 '+amt+'개 선물 완료!','success');
+}
+
+async function doBulkGiftCredits() {
+  var amt = parseInt((document.getElementById('bgm-amount')||{value:'1'}).value)||1;
+  var note = (document.getElementById('bgm-note')||{value:''}).value.trim()||'Admin bulk credit gift';
+  if(amt<1||amt>100){ showToast('⚠️ 1~100개 사이로 입력하세요','warn'); return; }
+  var rows = _buildCreditRows();
+  var count = 0;
+  var emails = Array.from(_selectedCreditEmails);
+  for(var i=0; i<emails.length; i++) {
+    var em = emails[i];
+    var r = rows.find(function(x){ return x.email.toLowerCase()===em.toLowerCase(); });
+    await _giftCreditsTo(em, r?r.company:em, amt, note);
+    // EmailJS 이메일 발송 (IIFE로 closure 변수 캡처)
+    (function(_em, _r) {
+      dbGetAccount(_em).then(function(acct) {
+        sendGiftEmail(_em, acct ? acct.name : _em, _r?_r.company:_em, amt, note);
+      });
+    })(em, r);
+    count++;
+  }
+  _selectedCreditEmails.clear();
+  closeBulkGiftModal();
+  renderAdminCredits();
+  renderAdminRevenue();
+  showToast('🎁 '+count+'명에게 각 크레딧 '+amt+'개 선물 완료!','success');
+}
+
+async function _giftCreditsTo(email, company, amt, note) {
+  var mn=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  var td=new Date(); var ds=mn[td.getMonth()]+' '+td.getDate()+', '+td.getFullYear();
+  email = email.toLowerCase();
+
+  try {
+    // 1. DB: transactions에 거래 기록 저장 (via admin-api)
+    var txRes = await adminInsertTransaction({
+      email: email,
+      pkg: 'Gift (' + amt + ' credits)',
+      credits: amt,
+      method: 'free',
+      status: 'paid',
+      amount: '0',
+      ref: 'GIFT-' + Date.now(),
+      created_at: new Date().toISOString()
+    });
+
+    // 2. DB: credits 테이블 업데이트 (서버사이드 API)
+    var auth=_getAuthForCredits();
+    await _creditsApi({action:'add', email:auth.email, pw_hash:auth.pw_hash, target_email:email, credits:amt});
+
+    // 3. 메모리 업데이트 (DB 성공 후에만)
+    var dbId = (txRes && txRes.data && txRes.data[0]) ? txRes.data[0].id : null;
+    var fid = dbId ? ('INV-' + String(dbId).padStart(5,'0')) : ('GIFT-' + String(Date.now()).slice(-5));
+    TXNS.unshift({
+      id:fid, dbId:dbId, date:ds, paidAt:ds, co:company||email, email:email,
+      pkg:'Gift (' + amt + ' credits)', sub:'$0.00', tax:'$0.00', tot:'$0.00',
+      subNum:0, taxNum:0, totNum:0, method:'free', status:'paid',
+      credits:amt, usedCredits:0, freeCredits:amt, ref:'GIFT-' + Date.now()
+    });
+    CREDIT_LEDGER.unshift({date:ds, co:company||email, type:'gift', credits:amt, ref:fid});
+
+    _totalCredits += amt;
+    syncCredits();
+
+  } catch(e) {
+    console.error('_giftCreditsTo DB error:', e);
+    showToast('❌ 크레딧 선물 DB 저장 실패: ' + e.message, 'error');
+  }
+}
+
+function _buildCreditRows() {
+  var empMap = {};
+  EMPLOYERS.forEach(function(e){
+    empMap[e.email.toLowerCase()] = {
+      email:e.email,company:e.company,joined:e.joined||'—',status:e.status,
+      total:0,used:0,spent:0
+    };
+  });
+  TXNS.forEach(function(tx){
+    if((tx.status==='paid'||tx.status==='confirmed') && tx.status!=='refunded'){
+      var key=(tx.email||'').toLowerCase();
+      if(!empMap[key]) empMap[key]={email:tx.email||key,company:tx.co||'—',joined:'—',status:'active',total:0,used:0,spent:0};
+      empMap[key].total += (tx.credits||0);
+      empMap[key].spent += (tx.totNum||0);
+    }
+  });
+  JOBS.forEach(function(j){
+    var key=(j.postedByEmail||'').toLowerCase();
+    if(empMap[key]&&(j.status==='active'||j.status==='expired'||j.status==='closed'))
+      empMap[key].used+=1;
+  });
+  return Object.values(empMap);
+}
+
+function renderAdminCredits() {
+  var kw=(document.getElementById('acr-kw')||{value:''}).value.toLowerCase();
+  var amtFilter=parseInt((document.getElementById('acr-amount-filter')||{value:''}).value||'0')||0;
+  var sort=(document.getElementById('acr-sort')||{value:'default'}).value||'default';
+
+  var rows = _buildCreditRows();
+
+  // 미결제 수
+  var zeroCount=rows.filter(function(r){return r.total===0&&r.status!=='deleted';}).length;
+  var summary=document.getElementById('acr-zero-summary');
+  var zeroCnt=document.getElementById('acr-zero-count');
+  if(zeroCnt) zeroCnt.textContent=zeroCount;
+  if(summary) summary.style.display=zeroCount>0?'':'none';
+
+  // 상태 필터
+  if(_creditFilter==='zero') rows=rows.filter(function(r){return r.total===0;});
+  else if(_creditFilter==='paid') rows=rows.filter(function(r){return r.total>0;});
+  else if(_creditFilter==='used') rows=rows.filter(function(r){return r.total>0&&r.used>=r.total;});
+
+  // 금액 필터
+  if(amtFilter>0) rows=rows.filter(function(r){return r.spent>=amtFilter;});
+
+  // 키워드
+  if(kw) rows=rows.filter(function(r){return r.email.toLowerCase().indexOf(kw)>-1||r.company.toLowerCase().indexOf(kw)>-1;});
+
+  // 정렬
+  if(sort==='default') rows.sort(function(a,b){return a.total-b.total;});
+  else if(sort==='spent_desc') rows.sort(function(a,b){return b.spent-a.spent;});
+  else if(sort==='spent_asc') rows.sort(function(a,b){return a.spent-b.spent;});
+  else if(sort==='credits_desc') rows.sort(function(a,b){return b.total-a.total;});
+  else if(sort==='joined_desc') rows.sort(function(a,b){return b.joined.localeCompare(a.joined);});
+  else if(sort==='joined_asc') rows.sort(function(a,b){return a.joined.localeCompare(b.joined);});
+
+  var h='';
+  rows.forEach(function(r){
+    var remain=Math.max(0,r.total-r.used);
+    var isZero=r.total===0;
+    var isDeleted=r.status==='deleted';
+    var isAllUsed=r.total>0&&r.used>=r.total;
+    var emailStr="'"+r.email.replace(/'/g,"\\'")+"'";
+    var coStr="'"+r.company.replace(/'/g,"\\'")+"'";
+    var checked=_selectedCreditEmails.has(r.email)?'checked':'';
+    var rowBg=isZero&&!isDeleted?'background:rgba(251,185,36,.04);':'';
+    if(isAllUsed) rowBg='background:rgba(248,113,113,.04);';
+
+    h+='<tr style="'+rowBg+(isDeleted?'opacity:.4':'')+'\">';
+    // 체크박스
+    h+='<td style="text-align:center;width:36px"><input type="checkbox" class="acr-row-check" data-email="'+r.email+'" '+checked+' onchange="toggleCreditRow(this)" style="width:15px;height:15px;cursor:pointer"></td>';
+    h+='<td style="color:#60A5FA;font-weight:600;font-size:12px">'+r.email+'</td>';
+    h+='<td style="font-weight:600">'+r.company+'</td>';
+    h+='<td style="color:rgba(255,255,255,.4);font-size:12px">'+r.joined+'</td>';
+    h+='<td style="color:#4ADE80;font-weight:700;text-align:center">$'+r.spent.toFixed(0)+'</td>';
+
+    if(isZero&&!isDeleted){
+      h+='<td style="text-align:center"><span style="color:#FBB924;font-weight:700">0</span></td>';
+      h+='<td style="text-align:center;color:rgba(255,255,255,.3)">0</td>';
+      h+='<td style="text-align:center;color:rgba(255,255,255,.3)">0</td>';
+      h+='<td><span class="abadge ab-amber" style="font-size:10px">💸 미결제</span></td>';
+    } else if(isAllUsed){
+      h+='<td style="color:#4ADE80;font-weight:700;text-align:center">'+r.total+'</td>';
+      h+='<td style="color:#F87171;text-align:center">'+r.used+'</td>';
+      h+='<td style="text-align:center"><span style="color:#F87171;font-weight:700">0</span></td>';
+      h+='<td><span class="abadge ab-red" style="font-size:10px">⚡ 소진</span></td>';
+    } else {
+      h+='<td style="color:#4ADE80;font-weight:700;text-align:center">'+r.total+'</td>';
+      h+='<td style="color:#F87171;text-align:center">'+r.used+'</td>';
+      h+='<td style="color:#60A5FA;font-weight:700;text-align:center">'+remain+'</td>';
+      h+='<td><span class="abadge ab-green" style="font-size:10px">✅ 보유중</span></td>';
+    }
+
+    h+='<td><div class="a-tbl-acts">';
+    h+='<button class="abtn abtn-g" style="font-size:11px" onclick="openGiftCreditsModal('+emailStr+','+coStr+')">🎁 선물</button>';
+    h+='<button class="abtn abtn-b" style="font-size:11px" onclick="adminViewCreditDetail('+emailStr+')">상세</button>';
+    h+='</div></td>';
+    h+='</tr>';
+  });
+
+  var tb=document.getElementById('acr-tbody');
+  if(tb) tb.innerHTML=h||'<tr><td colspan="10" style="text-align:center;padding:28px;color:rgba(255,255,255,.2)">해당 데이터 없음</td></tr>';
+
+  // 전체선택 체크박스 상태 동기화
+  var allCb=document.getElementById('acr-select-all');
+  if(allCb) allCb.checked=false;
+  updateBulkGiftBtn();
+}
+
+function adminViewCreditDetail(email) {
+  var modal = document.getElementById('admin-credit-modal');
+  if(!modal) return;
+  var emp = EMPLOYERS.find(function(e){ return e.email.toLowerCase()===email.toLowerCase(); });
+  var coName = emp ? emp.company : email;
+  document.getElementById('acm-company').textContent = coName;
+  // 해당 이메일의 TXNS만 필터
+  var myTxns = TXNS.filter(function(tx){ return (tx.email||'').toLowerCase()===email.toLowerCase(); });
+  var total = myTxns.filter(function(tx){return tx.status==='paid'||tx.status==='confirmed';}).reduce(function(s,tx){return s+(tx.credits||0);},0);
+  var used = JOBS.filter(function(j){ return (j.postedByEmail||'').toLowerCase()===email.toLowerCase() && (j.status==='active'||j.status==='expired'||j.status==='closed'); }).length;
+  var remain = Math.max(0, total - used);
+  document.getElementById('acm-total').textContent = total;
+  document.getElementById('acm-used').textContent = used;
+  document.getElementById('acm-remain').textContent = remain;
+  // 이력 렌더
+  var h = '';
+  if(!myTxns.length) {
+    h = '<div style="color:rgba(255,255,255,.3);font-size:12px;padding:8px">결제 이력 없음</div>';
+  } else {
+    myTxns.forEach(function(tx){
+      var methodIcon = tx.method==='card'?'💳':tx.method==='paypal'?'🅿️':tx.method==='interac'?'🏦':tx.method==='free'?'🎁':'💰';
+      var methodLabel = tx.method==='card'?'카드결제':tx.method==='paypal'?'PayPal':tx.method==='interac'?'Interac e-Transfer':tx.method==='free'?'관리자 무료지급':'기타';
+      var statusColor = (tx.status==='paid'||tx.status==='confirmed') ? '#4ADE80' : tx.status==='pending' ? '#FBB924' : '#F87171';
+      var statusLabel2 = tx.status==='paid'?'결제완료':tx.status==='confirmed'?'결제완료':tx.status==='pending'?'대기중':'취소';
+      h += '<div style="display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.06);flex-wrap:wrap">';
+      h += '<span style="font-size:18px">'+methodIcon+'</span>';
+      h += '<div style="flex:1;min-width:0">';
+      h += '<div style="font-size:13px;font-weight:700;color:#fff">'+tx.pkg+' <span style="color:#4ADE80">+'+tx.credits+'크레딧</span></div>';
+      h += '<div style="font-size:11px;color:rgba(255,255,255,.4);margin-top:2px">'+methodLabel+' · '+tx.date+' · '+tx.tot+'</div>';
+      if(tx.note) h += '<div style="font-size:11px;color:#FBB924;margin-top:2px">메모: '+tx.note+'</div>';
+      h += '</div>';
+      h += '<span style="font-size:11px;font-weight:700;color:'+statusColor+';white-space:nowrap">'+statusLabel2+'</span>';
+      h += '</div>';
+    });
+  }
+  document.getElementById('acm-log').innerHTML = h;
+  modal.classList.add('open');
+}
+
+function closeAdminCreditModal() {
+  var m = document.getElementById('admin-credit-modal'); if(m) m.classList.remove('open');
+}
+
+function adminViewEmployer(idx) {
+  var e = window._filtEmps ? window._filtEmps[idx] : null;
+  if(!e) return;
+  var modal = document.getElementById('admin-emp-modal');
+  if(!modal) return;
+
+  var isDeleted = e.status === 'deleted';
+  document.getElementById('aem-company').textContent = e.company + (isDeleted ? ' [삭제됨]' : '');
+  document.getElementById('aem-email').textContent = e.email;
+  document.getElementById('aem-prov').textContent = e.prov;
+  document.getElementById('aem-joined').textContent = e.joined;
+  document.getElementById('aem-postings').textContent = e.total + '개 총 · ' + e.active + '개 활성';
+  document.getElementById('aem-status').textContent = isDeleted ? '🗑 삭제 ('+( e.deletedAt||'—')+')' : e.status==='active' ? '🟢 활성' : '🔴 정지';
+
+  // 회사명 변경 이력
+  var nameLog = e.nameLog || [];
+  var nameLogEl = document.getElementById('aem-name-log');
+  if(nameLogEl){
+    if(nameLog.length){
+      var nlh = nameLog.map(function(nl){
+        return '<div style="display:flex;gap:8px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.05);font-size:12px">'
+          +'<span style="color:rgba(255,255,255,.35);min-width:100px">'+nl.date+'</span>'
+          +'<span style="color:rgba(255,255,255,.5)">✏️ <span style="color:#F87171;text-decoration:line-through">'+nl.from+'</span> → <span style="color:#4ADE80">'+nl.to+'</span></span>'
+          +'</div>';
+      }).join('');
+      nameLogEl.innerHTML = nlh;
+      nameLogEl.parentElement.style.display = '';
+    } else {
+      nameLogEl.innerHTML = '<div style="font-size:12px;color:rgba(255,255,255,.3)">변경 이력 없음</div>';
+    }
+  }
+
+  // 이 고용주의 공고 목록 (이메일 기준)
+  var empJobs = JOBS.filter(function(j){ return (j.postedByEmail||'').toLowerCase()===e.email.toLowerCase() || j.company===e.company; });
+  var jobsH = '';
+  empJobs.forEach(function(j){
+    var sc = j.status==='active'?'#4ADE80':j.status==='expired'?'#FBB924':'#F87171';
+    jobsH += '<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.05);font-size:12px">'
+      + '<span style="color:rgba(255,255,255,.6)">'+j.title+' <span style="color:rgba(255,255,255,.3)">('+j.company+')</span></span>'
+      + '<span style="color:'+sc+';font-weight:700">'+j.status+'</span>'
+      + '<span style="color:rgba(255,255,255,.3)">'+j.date+'</span>'
+      + '</div>';
+  });
+  var jobsEl = document.getElementById('aem-jobs-list');
+  if(jobsEl) jobsEl.innerHTML = jobsH || '<div style="font-size:12px;color:rgba(255,255,255,.3)">공고 없음</div>';
+
+  // 이 고용주의 결제 내역 (이메일 기준)
+  var empTxns = TXNS.filter(function(t){ return (t.email||'').toLowerCase()===e.email.toLowerCase(); });
+  var totalPaid = 0, totalCredits = 0, totalUsed = 0;
+  var txH = '';
+  var methodLabels = {card:'💳 카드', paypal:'🅿 PayPal', interac:'🏦 Interac', free:'🎁 무료지급(관리자)'};
+  var statusLabels = {paid:'✅ 완료', confirmed:'✓ 확인', pending:'⏳ 대기', cancelled:'❌ 취소'};
+  empTxns.forEach(function(tx){
+    if((tx.status==='paid'||tx.status==='confirmed') && tx.status!=='refunded') totalPaid += tx.totNum||0;
+    totalCredits += (tx.credits||0);
+    totalUsed += (tx.usedCredits||0);
+    var isPending = tx.status==='pending';
+    txH += '<div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,'+(isPending?'.2':'.06')+');border-radius:8px;padding:10px 12px;margin-bottom:6px">'
+      + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">'
+      + '<span style="font-size:12px;font-weight:700;color:#fff">'+tx.id+'</span>'
+      + '<span style="font-size:11px;font-weight:700;color:'+(isPending?'#FBB924':'#4ADE80')+'">'+(statusLabels[tx.status]||tx.status)+'</span>'
+      + '</div>'
+      + '<div style="display:flex;justify-content:space-between;font-size:11px;color:rgba(255,255,255,.4)">'
+      + '<span>'+tx.date+' · '+(methodLabels[tx.method]||tx.method)+'</span>'
+      + '<span style="color:#4ADE80;font-weight:700">'+tx.tot+'</span>'
+      + '</div>'
+      + '<div style="font-size:11px;color:rgba(255,255,255,.4);margin-top:2px">'+tx.pkg+' · 크레딧 '+tx.credits+'개 · 결제회사: '+tx.co+'</div>'
+      + (isPending ? '<button class="abtn abtn-g" style="margin-top:8px;font-size:11px" onclick="confirmInterac(\''+tx.id+'\');closeAdminEmpModal();setTimeout(function(){adminViewEmployer('+idx+');},100)">✓ 입금확인 → 크레딧 지급</button>' : '')
+      + '</div>';
+  });
+  var txEl = document.getElementById('aem-txns-list');
+  if(txEl) txEl.innerHTML = txH || '<div style="font-size:12px;color:rgba(255,255,255,.3)">결제 내역 없음</div>';
+
+  // 크레딧 현황
+  var creditRemain = totalCredits - totalUsed;
+  document.getElementById('aem-credits-total').textContent = totalCredits + '개 충전';
+  document.getElementById('aem-credits-used').textContent = totalUsed + '개 사용';
+  document.getElementById('aem-credits-remain').textContent = creditRemain + '개 잔여';
+  document.getElementById('aem-spent').textContent = '$' + totalPaid.toFixed(2);
+
+  // 대기 결제 섹션
+  var pendingTxns = empTxns.filter(function(t){ return t.status==='pending'; });
+  var pendSec = document.getElementById('aem-pending-section');
+  if(pendSec) pendSec.style.display = pendingTxns.length > 0 ? 'block' : 'none';
+
+  // 정지/복구 버튼
+  var suspBtn = document.getElementById('aem-suspend-btn');
+  var reinBtn = document.getElementById('aem-reinstate-btn');
+  if(suspBtn){ suspBtn.style.display = e.status==='active' ? '' : 'none';
+    suspBtn.onclick = function(){ if(confirm('Suspend account for '+e.company+'? All active job postings will be closed.')){ e.status='suspended'; renderAdminEmployers(); showToast('Account suspended.',''); closeAdminEmpModal(); } }; }
+  if(reinBtn){ reinBtn.style.display = e.status!=='active' ? '' : 'none';
+    reinBtn.onclick = function(){ e.status='active'; renderAdminEmployers(); showToast('✅ 복구되었습니다.','success'); closeAdminEmpModal(); }; }
+
+  // 크레딧 지급 버튼 연결
+  window._currentEmpForCredit = e;
+  modal.classList.add('open');
+}
+
+function openGiveCreditsForEmp() {
+  var e = window._currentEmpForCredit;
+  if(!e) return;
+  closeAdminEmpModal();
+  // give-credits-modal 열고 해당 고용주 선택
+  var sel = document.getElementById('gc-employer');
+  if(sel){
+    for(var i=0;i<sel.options.length;i++){
+      if(sel.options[i].value === e.company){ sel.selectedIndex=i; break; }
+    }
+  }
+  document.getElementById('give-credits-modal').classList.add('open');
+}
+
+function closeAdminEmpModal() {
+  var m = document.getElementById('admin-emp-modal'); if(m) m.classList.remove('open');
+}
+
+// ═══ 이슈 공고 관리 ═══
+var ISSUE_JOBS = []; // {id, jobId, jobTitle, company, issueType, note, action, status, createdAt}
+
+var ISSUE_TYPE_LABEL = {
+  salary:'💰 급여 이상',
+  discriminatory:'🚫 차별적 표현',
+  fake:'👻 유령 공고 의심',
+  duplicate:'📋 중복 공고',
+  quality:'🔍 품질 검토 (자동감지)',
+  other:'기타'
+};
+var ISSUE_ACTION_LABEL = {
+  hold:'🔒 검토 보류',
+  hide:'🙈 비공개 처리',
+  request_edit:'✏️ 수정 요청'
+};
+
+function openFlagJobModal() {
+  var sel = document.getElementById('flag-job-select');
+  if(sel){
+    sel.innerHTML = '<option value="">공고 선택…</option>';
+    JOBS.filter(function(j){ return j.src==='local' && j.status!=='deleted'; }).forEach(function(j){
+      sel.innerHTML += '<option value="'+j.id+'">['+j.status+'] '+j.title+' — '+j.company+'</option>';
+    });
+  }
+  var note = document.getElementById('flag-note'); if(note) note.value='';
+  var modal = document.getElementById('flag-job-modal'); if(modal) modal.classList.add('open');
+}
+function closeFlagJobModal() {
+  var m = document.getElementById('flag-job-modal'); if(m) m.classList.remove('open');
+}
+function doFlagJob() {
+  var jobId = (document.getElementById('flag-job-select')||{value:''}).value;
+  var issueType = (document.getElementById('flag-issue-type')||{value:'other'}).value;
+  var note = (document.getElementById('flag-note')||{value:''}).value.trim();
+  var action = (document.getElementById('flag-action')||{value:'hold'}).value;
+  if(!jobId){ showToast('⚠️ 공고를 선택하세요','warn'); return; }
+  if(!note){ showToast('⚠️ 이슈 메모를 입력하세요','warn'); return; }
+  var job = JOBS.find(function(j){ return String(j.id)===String(jobId); });
+  if(!job){ showToast('공고를 찾을 수 없습니다','warn'); return; }
+  var mn=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  var td=new Date(); var ds=mn[td.getMonth()]+' '+td.getDate()+', '+td.getFullYear();
+  // 이슈 등록
+  var newIssFlag = {
+    id:'ISS-'+String(Date.now()).slice(-5),
+    jobId:job.id, jobTitle:job.title, company:job.company,
+    issueType:issueType, note:note, action:action,
+    status:'pending', createdAt:ds
+  };
+  ISSUE_JOBS.unshift(newIssFlag);
+  dbSaveIssueJob(newIssFlag);
+  // 즉시 처리
+  if(action==='hide'){
+    job.status='closed';
+    job.statusLog = job.statusLog||[];
+    job.statusLog.push({date:ds, action:'closed', detail:'관리자 이슈 처리 — 비공개'});
+    ALL_JOBS=JOBS.concat(JOBBANK_JOBS);
+  }
+  // 배지 업데이트
+  renderIssueJobs();
+  updateIssueBadge();
+  closeFlagJobModal();
+  showToast('⚠️ 이슈 공고로 등록되었습니다'+(action==='hide'?' · 공고 비공개 처리됨':''),'success');
+}
+
+function renderIssueJobs() {
+  var typeFilter = (document.getElementById('issue-filter')||{value:''}).value;
+  var statusFilter = (document.getElementById('issue-status-filter')||{value:''}).value;
+  var list = document.getElementById('issue-jobs-list');
+  if(!list) return;
+  var filtered = ISSUE_JOBS.filter(function(iss){
+    if(typeFilter && iss.issueType!==typeFilter) return false;
+    if(statusFilter && iss.status!==statusFilter) return false;
+    return true;
+  });
+  if(!filtered.length){
+    list.innerHTML='<div style="text-align:center;padding:48px;color:rgba(255,255,255,.2);font-size:14px">✅ 이슈 공고 없음</div>';
+    return;
+  }
+  var h='';
+  filtered.forEach(function(iss){
+    var typeColor = iss.issueType==='salary'?'#FBB924':iss.issueType==='discriminatory'?'#F87171':iss.issueType==='fake'?'#C084FC':iss.issueType==='quality'?'#60A5FA':'#60A5FA';
+    var statusColor = iss.status==='pending'?'#FBB924':iss.status==='approved'?'#4ADE80':'#F87171';
+    var statusLabel = iss.status==='pending'?'검토 대기':iss.status==='approved'?'✅ 검토 후 등록':'🗑 삭제됨';
+    var issId = "'"+iss.id+"'";
+    h+='<div class="admin-card" style="margin-bottom:10px;border-left:3px solid '+typeColor+(iss.autoFlagged?';background:rgba(96,165,250,.05)':'')+'\">';
+    h+='<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px">';
+    h+='<div style="flex:1;min-width:0">';
+    h+='<div style="font-weight:700;color:#fff;margin-bottom:4px;font-size:13px;word-break:break-word">'+iss.jobTitle+' <span style="color:rgba(255,255,255,.4);font-weight:400">— '+iss.company+'</span>'+(iss.autoFlagged?'<span style="font-size:10px;background:#1e3a5f;color:#60A5FA;border-radius:4px;padding:2px 5px;margin-left:4px">🤖 Auto</span>':'')+'</div>';
+    h+='<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:4px">';
+    h+='<span style="font-size:11px;font-weight:700;color:'+typeColor+'">'+( ISSUE_TYPE_LABEL[iss.issueType]||iss.issueType)+'</span>';
+    h+='<span style="font-size:11px;color:rgba(255,255,255,.3)">'+iss.createdAt+'</span>';
+    h+='<span style="font-size:11px;font-weight:700;color:'+statusColor+'">● '+statusLabel+'</span>';
+    h+='</div>';
+    h+='<div style="font-size:11px;color:rgba(255,255,255,.4);margin-top:2px">'+iss.note+'</div>';
+    h+='</div>';
+    h+='<div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0">';
+    h+='<button class="abtn abtn-b" style="font-size:11px;padding:4px 8px" onclick="adminViewJob(\''+iss.jobId+'\')">📋</button>';
+    if(iss.status==='pending'){
+      h+='<button class="abtn abtn-g" style="font-size:11px;padding:4px 8px" onclick="resolveIssue('+issId+',\'approved\')">✅</button>';
+      h+='<button class="abtn abtn-r" style="font-size:11px;padding:4px 8px" onclick="resolveIssue('+issId+',\'removed\')">🗑</button>';
+    } else {
+      h+='<span style="font-size:10px;color:rgba(255,255,255,.3)">Done</span>';
+    }
+    h+='</div></div></div>';
+  });
+  list.innerHTML = h;
+}
+
+function resolveIssue(issId, resolution) {
+  var iss = ISSUE_JOBS.find(function(i){ return i.id===issId; });
+  if(!iss) return;
+  var mn=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  var td=new Date(); var ds=mn[td.getMonth()]+' '+td.getDate()+', '+td.getFullYear();
+  iss.status = resolution;
+  dbUpdateIssueStatus(iss.id, resolution);
+  if(resolution==='removed'){
+    var job=JOBS.find(function(j){return String(j.id)===String(iss.jobId);});
+    if(job){
+      job.status='deleted'; job.deletedByUser=false;
+      job.statusLog=job.statusLog||[];
+      job.statusLog.push({date:ds,action:'closed',detail:'관리자 이슈 삭제 — '+iss.note});
+      ALL_JOBS=JOBS.concat(JOBBANK_JOBS);
+    }
+    showToast('🗑 공고가 삭제되었습니다','');
+  } else {
+    showToast('✅ 이슈 공고 승인 처리 완료','success');
+  }
+  renderIssueJobs();
+  updateIssueBadge();
+  renderAdminJobs();
+  try{ doSearch(); }catch(e){}
+}
+
+function updateIssueBadge() {
+  var pending = ISSUE_JOBS.filter(function(i){return i.status==='pending';}).length;
+  var badge = document.getElementById('atb-reports-cnt');
+  if(badge){ badge.textContent=pending; badge.style.display=pending>0?'':'none'; }
+  var ao = document.getElementById('ao-reports');
+  if(ao) ao.textContent=pending;
+  var aot = document.getElementById('ao-reports-trend');
+  if(aot) aot.textContent=pending>0?'검토 필요':'이상 없음 ✅';
+}
+
+// 기존 함수 호환성 유지 (aTab에서 reports 렌더 호출)
+function reportDismiss(btn) { renderIssueJobs(); }
+function reportRemoveJob(btn) { renderIssueJobs(); }
+function updateReportsBadge(delta) { updateIssueBadge(); }
+function checkReportsEmpty() { renderIssueJobs(); }
 
 function exportCSV(type) {
   var headers=[], data=[];
@@ -3735,6 +6144,43 @@ function submitContact() {
   var mc=document.getElementById('cs-mc'); if(mc) mc.textContent='0';
 }
 
+async function saveAdminSettings() {
+  var dur=(document.getElementById('as-duration')||{value:'60'}).value;
+  var act=(document.getElementById('as-expire')||{value:''}).value;
+  var notice=(document.getElementById('as-notice')||{value:'7'}).value;
+  var cfg = {duration:dur, expireAction:act, noticeDays:notice};
+  // sessionStorage 백업
+  try{ sessionStorage.setItem('admin_cfg',JSON.stringify(cfg)); }catch(e){}
+  // DB 저장 via admin-api
+  try {
+    var r = await adminUpsertSettings({key: 'site_config', value: cfg, updated_at: new Date().toISOString()});
+    if(r && r.error) throw new Error(r.error);
+    showToast('✅ 설정이 저장되었습니다.','success');
+  } catch(e) {
+    console.error('Settings save error:', e);
+    showToast('✅ 설정 로컬 저장됨 (DB 연결 확인 필요)','');
+  }
+}
+async function loadAdminSettings() {
+  // DB에서 먼저 로드 via admin-api
+  try {
+    var s_data = await adminGetSettings();
+    if(s_data && s_data.value) {
+      var s = s_data.value;
+      if(s.duration){var el=document.getElementById('as-duration');if(el)el.value=s.duration;}
+      if(s.expireAction){var el=document.getElementById('as-expire');if(el)el.value=s.expireAction;}
+      if(s.noticeDays){var el=document.getElementById('as-notice');if(el)el.value=s.noticeDays;}
+      return;
+    }
+  } catch(e){}
+  // fallback: sessionStorage
+  try{
+    var s=JSON.parse(sessionStorage.getItem('admin_cfg')||'{}');
+    if(s.duration){var el=document.getElementById('as-duration');if(el)el.value=s.duration;}
+    if(s.expireAction){var el=document.getElementById('as-expire');if(el)el.value=s.expireAction;}
+    if(s.noticeDays){var el=document.getElementById('as-notice');if(el)el.value=s.noticeDays;}
+  }catch(e){}
+}
 
 // ===== UTILITY =====
 function openModal(id){ var el=document.getElementById(id); if(el) el.classList.add('open'); }
@@ -4048,6 +6494,7 @@ function _initApp() {
   try{
     if(localStorage.getItem('cjb_logged_in')==='1'){
       _isLoggedIn = true;
+      if(localStorage.getItem('cjb_is_admin')==='1') _isAdminUser = true;
       var savedEmail = localStorage.getItem('cjb_email')||'';
       var savedName = localStorage.getItem('cjb_name')||'';
       var savedCompany = localStorage.getItem('cjb_company')||'';
@@ -4058,7 +6505,7 @@ function _initApp() {
         dbGetAccount(savedEmail).then(function(dbAcct){
           if(dbAcct){
             _ACCOUNTS[savedEmail] = { pw: dbAcct.pw, name: dbAcct.name, company: dbAcct.company, is_admin: dbAcct.is_admin };
-            if(dbAcct.is_admin) { window.location.href = '/admin'; return; }
+            if(dbAcct.is_admin) { _isAdminUser = true; _adminPwHash = dbAcct.pw; }
             if(dbAcct.name && !savedName){ try{localStorage.setItem('cjb_name',dbAcct.name);}catch(e){} }
             if(dbAcct.company && !savedCompany){ try{localStorage.setItem('cjb_company',dbAcct.company);}catch(e){} var cn=document.getElementById('dash-co-name'); if(cn) cn.textContent=dbAcct.company; }
           }
@@ -4284,6 +6731,7 @@ function _initApp() {
   try{ doSearch(); } catch(e){}
   try{ updateNavState(); } catch(e){}
   try{ syncCredits(); } catch(e){}
+  try{ loadAdminSettings(); } catch(e){}
   var sb = document.getElementById('home-stats-bar');
   if(sb){ try{ var active=ALL_JOBS.filter(function(j){return j.status==='active';}).length; sb.textContent=active+' jobs available across Canada'; }catch(e){} }
 
@@ -4340,7 +6788,7 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 
 <!-- ══ SITE NAV ══ -->
 <nav id="site-nav" role="navigation" aria-label="Main">
-  <div class="yh-logo" onclick="go('home')" tabindex="0" role="link" aria-label="YouthHire home">
+  <div class="yh-logo" onclick="logoAdminTap();go('home')" tabindex="0" role="link" aria-label="YouthHire home">
     <svg class="yh-logo-mark" viewBox="0 0 32 32" fill="none" aria-hidden="true">
       <rect x="1" y="1" width="30" height="30" rx="9" fill="#2563EB"/>
       <path d="M10.5 9.5 L16 16 L21.5 9.5" stroke="#fff" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/>
@@ -5233,6 +7681,11 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
               <div id="acc-promo-msg" style="font-size:12px;margin-top:6px;display:none"></div>
             </div>
           </div>
+          <div id="admin-shortcut-box" style="background:#EFF6FF;border:1.5px solid #BFDBFE;border-radius:var(--r2);padding:22px;display:none">
+            <div style="font-size:13px;font-weight:800;color:#1E40AF;margin-bottom:8px">Admin Access</div>
+            <p style="font-size:13px;color:var(--gray);margin-bottom:14px;line-height:1.6">You are logged in as an administrator.</p>
+            <button class="btn btn-primary btn-sm" onclick="go('admin')" style="background:#1E40AF">Open Admin Panel →</button>
+          </div>
           <div style="background:#FEF2F2;border:1.5px solid #FECACA;border-radius:var(--r2);padding:22px">
             <div style="font-size:13px;font-weight:800;color:#9B1C1C;margin-bottom:8px">Account Deletion</div>
             <p style="font-size:13px;color:var(--gray);margin-bottom:14px;line-height:1.6">Permanently delete your account and all your listings. This cannot be undone.</p>
@@ -5245,6 +7698,858 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
   </div>
 </div>
 
+<!-- ══════════════════════════════════════════════════ -->
+<!--  ADMIN PANEL                                      -->
+<!-- ══════════════════════════════════════════════════ -->
+<div id="page-admin" class="page">
+  <div class="admin-wrap">
+    <div class="admin-top">
+      <div class="admin-title">🍁 관리자</div>
+      <div class="admin-nav-tabs">
+        <button class="admin-tab-btn on" onclick="aTab('overview',this)" id="atb-overview">📊 개요</button>
+        <button class="admin-tab-btn" onclick="aTab('jobs',this)" id="atb-jobs">📋 공고 <span class="admin-badge admin-badge-green" id="atb-jobs-cnt">0</span></button>
+        <button class="admin-tab-btn" onclick="aTab('employers',this)" id="atb-employers">👤 회원</button>
+        <button class="admin-tab-btn" onclick="aTab('credits',this)" id="atb-credits">🎫 크레딧</button>
+        <button class="admin-tab-btn" onclick="aTab('revenue',this)" id="atb-revenue">💰 수익</button>
+        <button class="admin-tab-btn" onclick="aTab('reports',this)" id="atb-reports">⚠️ 이슈공고 <span class="admin-badge admin-badge-red" id="atb-reports-cnt">0</span></button>
+        <button class="admin-tab-btn" onclick="aTab('partners',this)" id="atb-partners">🤝 파트너</button>
+        <button class="admin-tab-btn" onclick="aTab('settings',this)" id="atb-settings">⚙️ 설정</button>
+      </div>
+      <button class="admin-tab-btn" onclick="go('home')" style="color:rgba(255,255,255,.4);margin-left:auto;flex-shrink:0"><span class="admin-exit-full">← 나가기</span><span class="admin-exit-icon" style="display:none">✕</span></button>
+    </div>
+
+    <!-- Overview -->
+    <div class="admin-tab-pane on admin-body-pad" id="ap-overview">
+      <div class="admin-h2">플랫폼 현황</div>
+      <div class="a-stat-row">
+        <div class="a-stat a-stat-link" onclick="aTab('jobs',document.getElementById('atb-jobs'))" title="공고 관리로 이동">
+          <div class="a-stat-n" id="ao-active">0</div><div class="a-stat-l">활성 공고</div><div class="a-stat-arrow">→</div></div>
+        <div class="a-stat a-stat-link" onclick="aTab('employers',document.getElementById('atb-employers'))" title="고용주 관리로 이동">
+          <div class="a-stat-n" id="ao-employers">0</div><div class="a-stat-l">고용주 수</div><div class="a-stat-arrow">→</div></div>
+        <div class="a-stat a-stat-link" onclick="aTab('revenue',document.getElementById('atb-revenue'))" title="수익 관리로 이동">
+          <div class="a-stat-n" style="color:#4ADE80" id="ao-revenue">$0</div><div class="a-stat-l">수익 (확인됨)</div><div class="a-stat-trend" id="ao-revenue-trend" style="color:#4ADE80"></div><div class="a-stat-arrow" style="color:#4ADE80">→</div></div>
+        <div class="a-stat a-stat-link" onclick="aTab('reports',document.getElementById('atb-reports'))" title="이슈 공고 관리로 이동">
+          <div class="a-stat-n" style="color:#F87171" id="ao-reports">0</div><div class="a-stat-l">이슈 공고</div><div class="a-stat-trend" style="color:#F87171" id="ao-reports-trend"></div><div class="a-stat-arrow" style="color:#F87171">→</div></div>
+        <div class="a-stat a-stat-link" onclick="goToPendingRevenue()" title="미지급 크레딧 대상 보기" style="border-color:rgba(251,185,36,.3)">
+          <div class="a-stat-n" style="color:#FBB924" id="ao-pending-cnt">0</div>
+          <div class="a-stat-l" style="color:rgba(251,185,36,.6)">미지급 크레딧</div>
+          <div class="a-stat-trend" style="color:#FBB924;font-size:10px" id="ao-pending-amt"></div>
+          <div class="a-stat-arrow" style="color:#FBB924">→</div>
+        </div>
+        <div class="a-stat a-stat-link" onclick="aTab('revenue',document.getElementById('atb-revenue'))" title="수익 관리로 이동">
+          <div class="a-stat-n" id="ao-txns">0</div><div class="a-stat-l">거래 건수</div><div class="a-stat-arrow">→</div></div>
+      </div>
+      <!-- 미지급 크레딧 리스트 (펼침) -->
+      <div id="ao-pending-panel" style="display:none;background:rgba(251,185,36,.06);border:1px solid rgba(251,185,36,.2);border-radius:10px;padding:14px;margin-bottom:14px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+          <div style="font-size:11px;font-weight:800;color:#FBB924;text-transform:uppercase;letter-spacing:1px">⚠️ 입금 확인 대기 — 크레딧 미지급</div>
+          <button onclick="document.getElementById('ao-pending-panel').style.display='none'" style="background:none;border:none;color:rgba(255,255,255,.3);cursor:pointer;font-size:16px;padding:0">✕</button>
+        </div>
+        <div id="ao-pending-list"></div>
+      </div>
+      <div class="admin-two-col">
+        <div class="admin-card">
+          <div style="font-size:10px;font-weight:800;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:1px;margin-bottom:14px">수익 — 최근 6개월</div>
+          <div class="rev-chart-wrap" id="ao-rev-chart"></div>
+          <div class="rev-lbl-row" id="ao-rev-labels"></div>
+        </div>
+        <div class="admin-card">
+          <div style="font-size:10px;font-weight:800;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:1px;margin-bottom:14px">처리 필요</div>
+          <div id="ao-attn"></div>
+        </div>
+      </div>
+      <div class="admin-card mt16">
+        <div style="font-size:10px;font-weight:800;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px">최근 활동</div>
+        <div id="ao-activity"></div>
+      </div>
+    </div>
+
+    <!-- Postings -->
+    <div class="admin-tab-pane admin-body-pad" id="ap-jobs">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:16px">
+        <div><div class="admin-h2" style="margin:0">공고 관리</div><div style="font-size:12px;color:rgba(255,255,255,.3);margin-top:2px" id="ap-jobs-sub"></div></div>
+        <button class="abtn abtn-w" onclick="exportCSV('jobs')">⬇ CSV 내보내기</button>
+      </div>
+      <div class="admin-filter-bar">
+        <input class="a-input" type="text" id="aj-kw" placeholder="제목 또는 회사명 검색…" oninput="renderAdminJobs()" style="flex:1;min-width:160px">
+        <select class="a-select" id="aj-status" onchange="renderAdminJobs()"><option value="">전체 상태</option><option value="active">활성</option><option value="expired">만료(자동)</option><option value="closed">수동마감</option><option value="deleted">삭제됨</option></select>
+        <select class="a-select" id="aj-prov" onchange="renderAdminJobs()"><option value="">전체 지역</option><option value="British Columbia">BC</option><option value="Alberta">AB</option><option value="Ontario">ON</option><option value="Manitoba">MB</option><option value="Saskatchewan">SK</option></select>
+        <select class="a-select" id="aj-src" onchange="renderAdminJobs()"><option value="">전체 출처</option><option value="local">직접 등록</option><option value="jobbank">잡뱅크</option></select>
+      </div>
+      <div class="a-tbl-wrap">
+        <table><thead><tr><th>포지션</th><th>등록 아이디</th><th>계정 회사</th><th>공고 회사</th><th>지역</th><th>급여</th><th>등록일</th><th>만료일</th><th>상태</th><th>관리</th></tr></thead>
+        <tbody id="aj-tbody"></tbody></table>
+      </div>
+      <div id="aj-pagenav"></div>
+    </div>
+
+    <!-- Employers -->
+    <div class="admin-tab-pane admin-body-pad" id="ap-employers">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:16px">
+        <div class="admin-h2" style="margin:0">고용주 수</div>
+        <button class="abtn abtn-w" onclick="exportCSV('employers')">⬇ CSV 내보내기</button>
+      </div>
+      <div class="admin-filter-bar">
+        <input class="a-input" type="text" id="ae-kw" placeholder="회사명 또는 이메일 검색…" oninput="renderAdminEmployers()" style="flex:1;min-width:160px">
+        <select class="a-select" id="ae-status" onchange="renderAdminEmployers()"><option value="">전체 상태</option><option value="active">활성</option><option value="suspended">정지</option><option value="deleted">삭제됨</option></select>
+      </div>
+      <div class="a-tbl-wrap">
+        <table><thead><tr><th>Company</th><th>이메일</th><th>지역</th><th>가입일</th><th>공고 수</th><th>결제액</th><th>상태</th><th>관리</th></tr></thead>
+        <tbody id="ae-tbody"></tbody></table>
+      </div>
+    </div>
+
+    <!-- Credits -->
+    <div class="admin-tab-pane admin-body-pad" id="ap-credits">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px">
+        <div>
+          <div class="admin-h2" style="margin:0">🎫 크레딧 관리</div>
+          <div style="font-size:12px;color:rgba(255,255,255,.3);margin-top:2px">아이디 기준 크레딧 현황 · 미결제 회원 관리</div>
+        </div>
+      </div>
+
+      <!-- 상태 필터 탭 -->
+      <div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap">
+        <button class="abtn abtn-w" id="crtab-all" onclick="setCreditFilter('all',this)" style="border-bottom:2px solid #fff;font-weight:700;font-size:11px">전체</button>
+        <button class="abtn abtn-w" id="crtab-zero" onclick="setCreditFilter('zero',this)" style="opacity:.6;font-size:11px">💸 미결제</button>
+        <button class="abtn abtn-w" id="crtab-paid" onclick="setCreditFilter('paid',this)" style="opacity:.6;font-size:11px">✅ 결제완료</button>
+        <button class="abtn abtn-w" id="crtab-used" onclick="setCreditFilter('used',this)" style="opacity:.6;font-size:11px">⚡ 크레딧 소진</button>
+      </div>
+
+      <!-- 검색 + 금액 필터 + 일괄선물 -->
+      <div class="admin-filter-bar" style="margin-bottom:10px;flex-wrap:wrap;gap:8px">
+        <input class="a-input" type="text" id="acr-kw" placeholder="이메일 또는 회사명 검색…" oninput="renderAdminCredits()" style="flex:1;min-width:140px">
+        <select class="a-select" id="acr-amount-filter" onchange="renderAdminCredits()">
+          <option value="">결제금액 전체</option>
+          <option value="9">$9 이상</option>
+          <option value="50">$50 이상</option>
+          <option value="100">$100 이상</option>
+        </select>
+        <select class="a-select" id="acr-sort" onchange="renderAdminCredits()">
+          <option value="default">정렬: 미결제 우선</option>
+          <option value="spent_desc">결제금액 높은순</option>
+          <option value="spent_asc">결제금액 낮은순</option>
+          <option value="credits_desc">크레딧 많은순</option>
+          <option value="joined_desc">가입 최신순</option>
+          <option value="joined_asc">가입 오래된순</option>
+        </select>
+        <!-- 선택된 회원에게 일괄 선물 -->
+        <button class="abtn abtn-g" id="acr-bulk-gift-btn" onclick="openBulkGiftModal()" style="display:none">
+          🎁 선택 <span id="acr-selected-count">0</span>명 일괄 선물
+        </button>
+      </div>
+
+      <!-- 전체선택 + 미결제 요약 -->
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;flex-wrap:wrap">
+        <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:rgba(255,255,255,.5);cursor:pointer">
+          <input type="checkbox" id="acr-select-all" onchange="toggleSelectAllCredits(this.checked)" style="width:15px;height:15px;cursor:pointer">
+          전체 선택
+        </label>
+        <div id="acr-zero-summary" style="display:none;font-size:12px;color:#FBB924">
+          💸 <span id="acr-zero-count">0</span>명이 아직 미결제입니다
+        </div>
+      </div>
+
+      <div class="a-tbl-wrap">
+        <table>
+          <thead><tr>
+            <th style="width:36px"></th>
+            <th>이메일 (아이디)</th>
+            <th>회사명</th>
+            <th>가입일</th>
+            <th>총결제</th>
+            <th>크레딧</th>
+            <th>사용</th>
+            <th>잔여</th>
+            <th>상태</th>
+            <th>관리</th>
+          </tr></thead>
+          <tbody id="acr-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Revenue -->
+    <div class="admin-tab-pane admin-body-pad" id="ap-revenue">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:6px">
+        <div class="admin-h2" style="margin:0">수익 &amp; 크레딧</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="abtn abtn-g" onclick="openGiveCreditsModal()">🎁 무료 크레딧 지급</button>
+          <button class="abtn abtn-b" onclick="openInteracModal()">🏦 계좌이체 확인</button>
+          <button class="abtn" onclick="openManualTxnModal()" style="background:#6366F1;color:#fff">➕ 수동 거래 추가</button>
+          <button class="abtn abtn-w" onclick="exportCSV('revenue')">⬇ CSV</button>
+        </div>
+      </div>
+
+      <!-- Revenue Stats -->
+      <div class="a-stat-row" id="rev-stat-row">
+        <div class="a-stat"><div class="a-stat-n" style="color:#4ADE80" id="rs-confirmed">—</div><div class="a-stat-l">실제 수령</div><div class="a-stat-trend" style="color:rgba(255,255,255,.3)">카드+PayPal+계좌확인</div></div>
+        <div class="a-stat a-stat-link" onclick="openInteracModal()" style="border-color:rgba(251,185,36,.3)" title="Click to confirm pending payments"><div class="a-stat-n" style="color:#FBB924" id="rs-pending">—</div><div class="a-stat-l" style="color:rgba(251,185,36,.7)">입금 대기</div><div class="a-stat-trend" style="color:#FBB924" id="rs-pending-cnt"></div><div class="a-stat-arrow" style="color:#FBB924">→</div></div>
+        <div class="a-stat"><div class="a-stat-n" style="color:#60A5FA" id="rs-expected">—</div><div class="a-stat-l">예상 총수익</div><div class="a-stat-trend" style="color:rgba(255,255,255,.3)">확인+대기 합산</div></div>
+        <div class="a-stat"><div class="a-stat-n" id="rs-tax">—</div><div class="a-stat-l">세금 수집액</div></div>
+      </div>
+
+      <!-- Credit Stats: 판매 vs 무료 완전 분리 -->
+      <div style="font-size:10px;font-weight:800;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:1px;margin:20px 0 10px">크레딧 현황</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:20px">
+
+        <div class="admin-card" style="border-color:rgba(74,222,128,.25)">
+          <div style="font-size:10px;font-weight:800;color:#4ADE80;text-transform:uppercase;letter-spacing:1px;margin-bottom:12px">💳 결제 판매 크레딧</div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+            <span style="font-size:12px;color:rgba(255,255,255,.4)">발행 (판매)</span>
+            <span style="font-weight:800;color:#4ADE80;font-size:18px" id="cs-sold-total">—</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+            <span style="font-size:12px;color:rgba(255,255,255,.4)">사용됨</span>
+            <span style="font-weight:700;color:#F87171" id="cs-sold-used">—</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+            <span style="font-size:12px;color:rgba(255,255,255,.4)">잔여</span>
+            <span style="font-weight:700;color:#60A5FA" id="cs-sold-remain">—</span>
+          </div>
+          <div style="border-top:1px solid rgba(255,255,255,.07);padding-top:10px;display:flex;justify-content:space-between">
+            <span style="font-size:11px;color:rgba(255,255,255,.3)">평균 단가</span>
+            <span style="font-weight:800;color:#4ADE80" id="cs-avg-price">—</span>
+          </div>
+        </div>
+
+        <div class="admin-card" style="border-color:rgba(251,185,36,.25)">
+          <div style="font-size:10px;font-weight:800;color:#FBB924;text-transform:uppercase;letter-spacing:1px;margin-bottom:12px">🎁 무료 지급 크레딧</div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+            <span style="font-size:12px;color:rgba(255,255,255,.4)">가입 환영 지급</span>
+            <span style="font-weight:700;color:#FBB924" id="cs-free-signup">—</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+            <span style="font-size:12px;color:rgba(255,255,255,.4)">어드민 수동 지급</span>
+            <span style="font-weight:700;color:#FBB924" id="cs-free-admin">—</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+            <span style="font-size:12px;color:rgba(255,255,255,.4)">사용됨</span>
+            <span style="font-weight:700;color:#F87171" id="cs-free-used">—</span>
+          </div>
+          <div style="border-top:1px solid rgba(255,255,255,.07);padding-top:10px;display:flex;justify-content:space-between">
+            <span style="font-size:11px;color:rgba(255,255,255,.3)">기회비용</span>
+            <span style="font-weight:800;color:#FBB924" id="cs-free-cost">—</span>
+          </div>
+        </div>
+
+        <div class="admin-card" style="border-color:rgba(96,165,250,.25)">
+          <div style="font-size:10px;font-weight:800;color:#60A5FA;text-transform:uppercase;letter-spacing:1px;margin-bottom:12px">📊 전체 요약</div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+            <span style="font-size:12px;color:rgba(255,255,255,.4)">총 발행</span>
+            <span style="font-weight:700;color:#fff" id="cs-total-issued">—</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+            <span style="font-size:12px;color:rgba(255,255,255,.4)">총 사용 (공고 게시)</span>
+            <span style="font-weight:700;color:#F87171" id="cs-total-used">—</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+            <span style="font-size:12px;color:rgba(255,255,255,.4)">미사용 잔여</span>
+            <span style="font-weight:700;color:#60A5FA" id="cs-total-remain">—</span>
+          </div>
+          <div style="border-top:1px solid rgba(255,255,255,.07);padding-top:10px;display:flex;justify-content:space-between">
+            <span style="font-size:11px;color:rgba(255,255,255,.3)">잔여 잠재가치</span>
+            <span style="font-weight:800;color:#60A5FA" id="cs-remain-value">—</span>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Pending Interac transfers alert -->
+      <div id="pending-alert" style="display:none;background:rgba(251,185,36,.08);border:1px solid rgba(251,185,36,.25);border-radius:10px;padding:12px 16px;margin-bottom:14px;display:flex;align-items:center;gap:10px">
+        <span style="font-size:18px">⚠️</span>
+        <div><div style="font-weight:700;color:#FBB924;font-size:13px" id="pending-alert-text">Pending payments awaiting confirmation</div><div style="font-size:11px;color:rgba(255,255,255,.4);margin-top:2px">Click <strong style="color:#FBB924;cursor:pointer" onclick="openInteracModal()">Pending Payments →</strong> to confirm and distribute credits</div></div>
+      </div>
+
+      <!-- Add Transaction button -->
+      <div style="display:flex;justify-content:flex-end;margin-bottom:10px">
+        <button class="abtn abtn-g" onclick="openAddTxnModal()">➕ 수동 거래 추가</button>
+      </div>
+
+      <!-- Filters -->
+      <div class="admin-filter-bar">
+        <input class="a-input" type="text" id="ar-kw" placeholder="회사명 or 인보이스 검색…" oninput="renderAdminRevenue()" style="flex:1;min-width:160px">
+        <select class="a-select" id="ar-month" onchange="renderAdminRevenue()">
+          <option value="">전체 기간</option>
+        </select>
+        <select class="a-select" id="ar-method" onchange="renderAdminRevenue()">
+          <option value="">전체 결제수단</option>
+          <option value="card">💳 Card</option>
+          <option value="paypal">🅿 PayPal</option>
+          <option value="interac">🏦 Interac</option>
+          <option value="free">🎁 Free</option>
+        </select>
+        <select class="a-select" id="ar-status" onchange="renderAdminRevenue()">
+          <option value="">All Status</option>
+          <option value="paid">✅ 결제완료</option>
+          <option value="confirmed">✅ 결제완료(Interac)</option>
+          <option value="pending">⏳ 대기중</option>
+          <option value="refunded">↩ 환불됨</option>
+          <option value="cancelled">❌ 취소</option>
+        </select>
+      </div>
+
+      <div class="a-tbl-wrap">
+        <table><thead><tr>
+          <th>인보이스</th><th>날짜</th><th>회사</th><th>패키지</th>
+          <th>결제수단</th><th>금액</th><th>세금</th><th>합계</th>
+          <th>크레딧</th><th>사용</th><th>상태</th><th>관리</th>
+        </tr></thead>
+        <tbody id="ar-tbody"></tbody>
+        </table>
+      </div>
+
+    </div>
+
+    <!-- Reports -->
+    <div class="admin-tab-pane admin-body-pad" id="ap-reports">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:16px">
+        <div>
+          <div class="admin-h2" style="margin:0">⚠️ 이슈 공고 관리</div>
+          <div style="font-size:12px;color:rgba(255,255,255,.3);margin-top:2px">관리자가 직접 이상 공고를 표시하고 승인/수정/삭제 처리합니다</div>
+        </div>
+        <button class="abtn abtn-r" onclick="openFlagJobModal()">⚠️ 공고 이슈 등록</button>
+      </div>
+      <!-- 이슈 유형 필터 -->
+      <div class="admin-filter-bar" style="margin-bottom:16px">
+        <select class="a-select" id="issue-filter" onchange="renderIssueJobs()">
+          <option value="">전체 이슈</option>
+          <option value="salary">급여 이상</option>
+          <option value="discriminatory">차별적 표현</option>
+          <option value="fake">유령 공고 의심</option>
+          <option value="duplicate">중복 공고</option>
+          <option value="other">기타</option>
+        </select>
+        <select class="a-select" id="issue-status-filter" onchange="renderIssueJobs()">
+          <option value="pending">검토 대기</option>
+          <option value="">전체 보기</option>
+          <option value="approved">✅ 검토 후 등록</option>
+          <option value="removed">🗑 삭제됨</option>
+        </select>
+      </div>
+      <div id="issue-jobs-list"></div>
+    </div>
+
+    <!-- Partners -->
+    <div class="admin-tab-pane admin-body-pad" id="ap-partners">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:16px">
+        <div>
+          <div class="admin-h2" style="margin:0">🤝 파트너 코드 관리</div>
+          <div style="font-size:12px;color:rgba(255,255,255,.3);margin-top:2px">기관별 프로모 코드 발급 · 추적 · 통계</div>
+        </div>
+        <button class="abtn abtn-g" onclick="openCreatePromoModal()">➕ 새 코드 생성</button>
+      </div>
+
+      <!-- 통계 카드 -->
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:18px">
+        <div class="admin-stat-card"><span style="font-size:11px;color:rgba(255,255,255,.3)">전체 코드</span><span style="font-weight:800;font-size:20px" id="ps-total">0</span></div>
+        <div class="admin-stat-card"><span style="font-size:11px;color:rgba(255,255,255,.3)">활성 코드</span><span style="font-weight:800;font-size:20px;color:#4ADE80" id="ps-active">0</span></div>
+        <div class="admin-stat-card"><span style="font-size:11px;color:rgba(255,255,255,.3)">총 사용 횟수</span><span style="font-weight:800;font-size:20px;color:#60A5FA" id="ps-used">0</span></div>
+        <div class="admin-stat-card"><span style="font-size:11px;color:rgba(255,255,255,.3)">지급 크레딧</span><span style="font-weight:800;font-size:20px;color:#FBBF24" id="ps-credits">0</span></div>
+      </div>
+
+      <!-- 코드 테이블 -->
+      <div class="a-tbl-wrap">
+        <table><thead><tr>
+          <th>코드</th><th>기관</th><th>Tier</th><th>크레딧</th><th>무료 기간</th>
+          <th>사용/제한</th><th>상태</th><th>링크</th><th>관리</th>
+        </tr></thead>
+        <tbody id="partners-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 새 프로모 코드 생성 모달 -->
+    <div class="overlay" id="modal-create-promo" role="dialog" aria-modal="true">
+      <div class="modal-box" style="max-width:460px;background:#1a1a2e;color:#fff">
+        <div class="modal-head">
+          <h2>➕ 새 파트너 코드 생성</h2>
+          <button class="modal-close" onclick="closeModal('modal-create-promo')" aria-label="Close">✕</button>
+        </div>
+        <div class="modal-body" style="display:flex;flex-direction:column;gap:10px">
+          <label style="font-size:12px;color:rgba(255,255,255,.5)">코드 *</label>
+          <input class="a-input" type="text" id="cp-code" placeholder="e.g., AFN2026" style="text-transform:uppercase" maxlength="30">
+          <label style="font-size:12px;color:rgba(255,255,255,.5)">기관명 *</label>
+          <input class="a-input" type="text" id="cp-org" placeholder="e.g. University of Toronto, YMCA Youth Program">
+          <label style="font-size:12px;color:rgba(255,255,255,.5)">기관 이메일</label>
+          <input class="a-input" type="email" id="cp-email" placeholder="contact@org.ca">
+          <div style="display:flex;gap:10px">
+            <div style="flex:1"><label style="font-size:12px;color:rgba(255,255,255,.5)">Tier</label>
+              <select class="a-select" id="cp-tier" style="width:100%">
+                <option value="tier1">Tier 1 (전국)</option>
+                <option value="tier2">Tier 2 (주)</option>
+                <option value="tier3">Tier 3 (도시)</option>
+              </select>
+            </div>
+            <div style="flex:1"><label style="font-size:12px;color:rgba(255,255,255,.5)">무료 크레딧</label>
+              <input class="a-input" type="number" id="cp-credits" value="3" min="1" max="50">
+            </div>
+          </div>
+          <div style="display:flex;gap:10px">
+            <div style="flex:1"><label style="font-size:12px;color:rgba(255,255,255,.5)">무료 시작일 *</label>
+              <input class="a-input" type="date" id="cp-freestart" value="2026-04-01">
+            </div>
+            <div style="flex:1"><label style="font-size:12px;color:rgba(255,255,255,.5)">무료 종료일 *</label>
+              <input class="a-input" type="date" id="cp-freeend" value="2026-04-30">
+            </div>
+          </div>
+          <div style="display:flex;gap:10px;align-items:center">
+            <div style="flex:1"><label style="font-size:12px;color:rgba(255,255,255,.5)">최대 사용 횟수 (0=무제한)</label>
+              <input class="a-input" type="number" id="cp-max" value="0" min="0">
+            </div>
+            <label style="font-size:12px;color:rgba(255,255,255,.5);display:flex;align-items:center;gap:6px;margin-top:16px;cursor:pointer">
+              <input type="checkbox" id="cp-universal"> 🌐 범용 코드 (대량 배포용)
+            </label>
+          </div>
+          <label style="font-size:12px;color:rgba(255,255,255,.5)">사용자에게 보여줄 메시지 (선택)</label>
+          <input class="a-input" type="text" id="cp-display" placeholder="e.g., 2 months free job posting credits!">
+          <label style="font-size:12px;color:rgba(255,255,255,.5)">내부 메모 (선택)</label>
+          <input class="a-input" type="text" id="cp-notes" placeholder="관리용 메모">
+          <button class="abtn abtn-g" style="margin-top:8px;width:100%;padding:12px" onclick="submitCreatePromo()">✅ 코드 생성</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Settings -->
+    <div class="admin-tab-pane admin-body-pad" id="ap-settings">
+      <div class="admin-h2">플랫폼 설정</div>
+      <div class="admin-two-col">
+        <div class="admin-card">
+          <div style="font-size:12px;font-weight:800;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:1px;margin-bottom:16px">공고 기본 설정</div>
+          <div style="margin-bottom:14px"><label style="font-size:12px;color:rgba(255,255,255,.45);display:block;margin-bottom:6px">기본 공고 기간 (일)</label><input id="as-duration" class="a-input" type="number" value="60" style="width:100%;border-radius:8px"></div>
+          <div style="margin-bottom:14px"><label style="font-size:12px;color:rgba(255,255,255,.45);display:block;margin-bottom:6px">만료 후 처리</label><select id="as-expire" class="a-select" style="width:100%;border-radius:8px"><option value="hide">공개 숨기기</option><option value="close">마감 처리</option><option value="email">고용주에게 이메일만</option></select></div>
+          <div style="margin-bottom:14px"><label style="font-size:12px;color:rgba(255,255,255,.45);display:block;margin-bottom:6px">만료 알림 (만료 N일 전)</label><input id="as-notice" class="a-input" type="number" value="7" style="width:100%;border-radius:8px"></div>
+          <button class="abtn abtn-g" onclick="saveAdminSettings()">설정 저장</button>
+        </div>
+        <div class="admin-card">
+          <div style="font-size:12px;font-weight:800;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:1px;margin-bottom:16px">세율 (자동 적용)</div>
+          <div style="font-size:12px;color:rgba(255,255,255,.35);line-height:1.85">
+            🇨🇦 Ontario: HST 13%<br>
+            🇨🇦 BC: GST+PST 12%<br>
+            🇨🇦 Alberta: GST 5%<br>
+            🇨🇦 Quebec: GST+QST 14.975%<br>
+            🇨🇦 Nova Scotia: HST 15%<br>
+            🇨🇦 Other provinces: GST 5%<br>
+            <span style="color:rgba(255,255,255,.25);margin-top:8px;display:block">Rates applied at checkout based on employer's registered province.</span>
+          </div>
+        </div>
+      </div>
+      <!-- Job Bank CSV Import -->
+      <div class="admin-card" style="margin-top:20px">
+        <div style="font-size:12px;font-weight:800;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:1px;margin-bottom:16px">Job Bank CSV Import</div>
+        <p style="font-size:12px;color:rgba(255,255,255,.35);margin-bottom:12px">
+          Download the latest CSV from <a href="https://open.canada.ca/data/en/dataset/ea639e28-c0fc-48bf-b5dd-b8899bd43072" target="_blank" style="color:var(--accent)">open.canada.ca</a>, then upload it here.
+        </p>
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+          <input type="file" id="jb-csv-file" accept=".csv" style="font-size:12px;color:rgba(255,255,255,.5)">
+          <button class="abtn abtn-g" onclick="importJobBankCSV()">Import CSV</button>
+        </div>
+        <div id="jb-csv-status" style="font-size:12px;margin-top:10px;color:rgba(255,255,255,.35);display:none"></div>
+        <div style="margin-top:12px;font-size:11px;color:rgba(255,255,255,.2)">
+          Current Job Bank postings: <strong id="jb-count" style="color:var(--accent)">0</strong> |
+          <button class="abtn abtn-r" style="font-size:10px;padding:2px 8px" onclick="clearJobBankJobs()">Clear All</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ ADMIN: Reopen Credit Charge Modal ══ -->
+<div id="reopen-modal" class="admin-modal" onclick="if(event.target===this)closeReopenModal()">
+  <div class="admin-modal-box" style="max-width:400px">
+    <div class="admin-modal-hd">
+      <div style="font-size:15px;font-weight:800;color:#fff">재오픈 — 크레딧 확인</div>
+      <button class="admin-modal-close" onclick="closeReopenModal()">✕</button>
+    </div>
+    <div class="admin-modal-body" style="text-align:center;padding:28px 24px">
+      <div id="reopen-modal-body"></div>
+    </div>
+    <div class="admin-modal-ft">
+      <button id="reopen-confirm-btn" class="abtn abtn-g" onclick="doReopenWithCredit()">✅ 동의 — 크레딧 1개 차감 후 재오픈</button>
+      <button class="abtn abtn-w" onclick="closeReopenModal()">취소</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ ADMIN: Give Free Credits Modal ══ -->
+<!-- ══ ADMIN: Bulk Gift Credits Modal ══ -->
+<div id="bulk-gift-modal" class="admin-modal" onclick="if(event.target===this)closeBulkGiftModal()">
+  <div class="admin-modal-box" style="max-width:460px">
+    <div class="admin-modal-hd">
+      <div style="font-size:16px;font-weight:800;color:#fff">🎁 일괄 크레딧 선물</div>
+      <button class="admin-modal-close" onclick="closeBulkGiftModal()">✕</button>
+    </div>
+    <div class="admin-modal-body">
+      <div style="background:rgba(74,222,128,.08);border:1px solid rgba(74,222,128,.15);border-radius:10px;padding:12px 16px;margin-bottom:16px">
+        <div style="font-size:13px;color:rgba(255,255,255,.5);margin-bottom:6px">선물 대상 (<span id="bgm-count">0</span>명)</div>
+        <div id="bgm-target-list" style="font-size:12px;color:#4ADE80;line-height:1.8;max-height:100px;overflow-y:auto"></div>
+      </div>
+      <div style="margin-bottom:16px">
+        <label style="font-size:12px;color:rgba(255,255,255,.4);display:block;margin-bottom:8px">1인당 선물할 크레딧 수</label>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+          <button class="abtn abtn-w" onclick="setBulkGiftAmt(1)" id="bgm-btn-1" style="font-size:15px;font-weight:800;min-width:52px">1</button>
+          <button class="abtn abtn-w" onclick="setBulkGiftAmt(3)" id="bgm-btn-3" style="font-size:15px;font-weight:800;min-width:52px">3</button>
+          <button class="abtn abtn-w" onclick="setBulkGiftAmt(5)" id="bgm-btn-5" style="font-size:15px;font-weight:800;min-width:52px">5</button>
+          <button class="abtn abtn-w" onclick="setBulkGiftAmt(10)" id="bgm-btn-10" style="font-size:15px;font-weight:800;min-width:52px">10</button>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <label style="font-size:12px;color:rgba(255,255,255,.4)">직접 입력:</label>
+          <input id="bgm-amount" class="a-input" type="number" min="1" max="100" value="1" style="width:80px;border-radius:8px;text-align:center;font-weight:700">
+          <span style="font-size:13px;color:rgba(255,255,255,.4)">개</span>
+        </div>
+      </div>
+      <div style="margin-bottom:14px">
+        <label style="font-size:12px;color:rgba(255,255,255,.4);display:block;margin-bottom:6px">메모 (이메일 알림에 포함)</label>
+        <textarea id="bgm-note" class="a-input" style="width:100%;min-height:70px;border-radius:8px;resize:vertical" placeholder="예: 신규 가입 감사 이벤트 크레딧입니다!"></textarea>
+      </div>
+      <div style="background:rgba(96,165,250,.08);border:1px solid rgba(96,165,250,.15);border-radius:8px;padding:10px 14px;font-size:12px;color:rgba(255,255,255,.4)">
+        📧 EmailJS 연동 후 각 회원에게 크레딧 선물 알림 이메일이 자동 발송됩니다.
+      </div>
+    </div>
+    <div class="admin-modal-ft">
+      <button class="abtn abtn-g" onclick="doBulkGiftCredits()">🎁 일괄 선물하기</button>
+      <button class="abtn abtn-w" onclick="closeBulkGiftModal()">취소</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ ADMIN: Gift Credits Modal ══ -->
+<div id="gift-credits-modal" class="admin-modal" onclick="if(event.target===this)closeGiftCreditsModal()">
+  <div class="admin-modal-box" style="max-width:440px">
+    <div class="admin-modal-hd">
+      <div style="font-size:16px;font-weight:800;color:#fff">🎁 크레딧 선물하기</div>
+      <button class="admin-modal-close" onclick="closeGiftCreditsModal()">✕</button>
+    </div>
+    <div class="admin-modal-body">
+      <div style="background:rgba(74,222,128,.08);border:1px solid rgba(74,222,128,.15);border-radius:10px;padding:12px 16px;margin-bottom:16px">
+        <div style="font-size:13px;font-weight:700;color:#4ADE80" id="gcm-target-name">회사명</div>
+        <div style="font-size:12px;color:rgba(255,255,255,.4);margin-top:3px" id="gcm-target-email">이메일</div>
+      </div>
+      <div style="margin-bottom:16px">
+        <label style="font-size:12px;color:rgba(255,255,255,.4);display:block;margin-bottom:8px">선물할 크레딧 수</label>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+          <button class="abtn abtn-w" onclick="setGiftAmt(1)" id="gcm-btn-1" style="font-size:15px;font-weight:800;min-width:52px">1</button>
+          <button class="abtn abtn-w" onclick="setGiftAmt(3)" id="gcm-btn-3" style="font-size:15px;font-weight:800;min-width:52px">3</button>
+          <button class="abtn abtn-w" onclick="setGiftAmt(5)" id="gcm-btn-5" style="font-size:15px;font-weight:800;min-width:52px">5</button>
+          <button class="abtn abtn-w" onclick="setGiftAmt(10)" id="gcm-btn-10" style="font-size:15px;font-weight:800;min-width:52px">10</button>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <label style="font-size:12px;color:rgba(255,255,255,.4)">직접 입력:</label>
+          <input id="gcm-amount" class="a-input" type="number" min="1" max="100" value="1" style="width:80px;border-radius:8px;text-align:center;font-weight:700">
+          <span style="font-size:13px;color:rgba(255,255,255,.4)">개</span>
+        </div>
+      </div>
+      <div style="margin-bottom:14px">
+        <label style="font-size:12px;color:rgba(255,255,255,.4);display:block;margin-bottom:6px">메모 (이메일 알림에 포함)</label>
+        <textarea id="gcm-note" class="a-input" style="width:100%;min-height:70px;border-radius:8px;resize:vertical" placeholder="예: 가입 감사 이벤트 크레딧 3개 드립니다!"></textarea>
+      </div>
+      <div style="background:rgba(96,165,250,.08);border:1px solid rgba(96,165,250,.15);border-radius:8px;padding:10px 14px;font-size:12px;color:rgba(255,255,255,.4)">
+        📧 EmailJS 연동 후 자동으로 크레딧 선물 알림 이메일이 발송됩니다.
+      </div>
+    </div>
+    <div class="admin-modal-ft">
+      <button class="abtn abtn-g" onclick="doGiftCredits()">🎁 선물하기</button>
+      <button class="abtn abtn-w" onclick="closeGiftCreditsModal()">취소</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ ADMIN: Flag Job Modal ══ -->
+<div id="flag-job-modal" class="admin-modal" onclick="if(event.target===this)closeFlagJobModal()">
+  <div class="admin-modal-box" style="max-width:500px">
+    <div class="admin-modal-hd">
+      <div style="font-size:16px;font-weight:800;color:#fff">⚠️ 이슈 공고 등록</div>
+      <button class="admin-modal-close" onclick="closeFlagJobModal()">✕</button>
+    </div>
+    <div class="admin-modal-body">
+      <div style="margin-bottom:14px">
+        <label style="font-size:12px;color:rgba(255,255,255,.4);display:block;margin-bottom:6px">공고 선택 *</label>
+        <select id="flag-job-select" class="a-select" style="width:100%;border-radius:8px"></select>
+      </div>
+      <div style="margin-bottom:14px">
+        <label style="font-size:12px;color:rgba(255,255,255,.4);display:block;margin-bottom:6px">이슈 유형 *</label>
+        <select id="flag-issue-type" class="a-select" style="width:100%;border-radius:8px">
+          <option value="salary">💰 급여 이상 (최저임금 미달 등)</option>
+          <option value="discriminatory">🚫 차별적 표현 (CHRA 위반 가능)</option>
+          <option value="fake">👻 유령 공고 의심</option>
+          <option value="duplicate">📋 중복 공고</option>
+          <option value="other">기타</option>
+        </select>
+      </div>
+      <div style="margin-bottom:14px">
+        <label style="font-size:12px;color:rgba(255,255,255,.4);display:block;margin-bottom:6px">이슈 메모 *</label>
+        <textarea id="flag-note" class="a-input" style="width:100%;min-height:80px;border-radius:8px;resize:vertical" placeholder="구체적인 이슈 내용을 입력하세요…"></textarea>
+      </div>
+      <div style="margin-bottom:14px">
+        <label style="font-size:12px;color:rgba(255,255,255,.4);display:block;margin-bottom:6px">공고 처리</label>
+        <select id="flag-action" class="a-select" style="width:100%;border-radius:8px">
+          <option value="hold">🔒 검토 보류 (공개 유지)</option>
+          <option value="hide">🙈 즉시 비공개 처리</option>
+          <option value="request_edit">✏️ 고용주에게 수정 요청</option>
+        </select>
+      </div>
+    </div>
+    <div class="admin-modal-ft">
+      <button class="abtn abtn-r" onclick="doFlagJob()">⚠️ 이슈 등록</button>
+      <button class="abtn abtn-w" onclick="closeFlagJobModal()">취소</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ ADMIN: 수동 거래 추가 Modal ══ -->
+<div id="manual-txn-modal" class="admin-modal" onclick="if(event.target===this)closeManualTxnModal()">
+  <div class="admin-modal-box" style="max-width:500px">
+    <div class="admin-modal-hd">
+      <div style="font-size:16px;font-weight:800;color:#fff">➕ 수동 거래 추가</div>
+      <button class="admin-modal-close" onclick="closeManualTxnModal()">✕</button>
+    </div>
+    <div class="admin-modal-body">
+      <div style="margin-bottom:14px">
+        <label style="font-size:12px;color:rgba(255,255,255,.4);display:block;margin-bottom:6px">고용주 이메일 *</label>
+        <select id="mt-employer" class="a-select" style="width:100%;border-radius:8px"></select>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
+        <div>
+          <label style="font-size:12px;color:rgba(255,255,255,.4);display:block;margin-bottom:6px">패키지</label>
+          <select id="mt-pkg" class="a-select" style="width:100%;border-radius:8px" onchange="mtPkgChanged()">
+            <option value="single">Single (1) — $10.49</option>
+            <option value="triple">3-Pack (3) — $26.24</option>
+            <option value="ten">10-Pack (10) — $62.99</option>
+            <option value="thirty">30-Pack (30) — $157.49</option>
+            <option value="custom">직접 입력</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size:12px;color:rgba(255,255,255,.4);display:block;margin-bottom:6px">결제 수단</label>
+          <select id="mt-method" class="a-select" style="width:100%;border-radius:8px">
+            <option value="card">💳 Card (Stripe)</option>
+            <option value="interac">🏦 Interac</option>
+            <option value="paypal">🅿 PayPal</option>
+            <option value="cash">💵 현금</option>
+            <option value="other">기타</option>
+          </select>
+        </div>
+      </div>
+      <div id="mt-custom-fields" style="display:none;margin-bottom:14px">
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
+          <div>
+            <label style="font-size:12px;color:rgba(255,255,255,.4);display:block;margin-bottom:6px">금액 (세전)</label>
+            <input id="mt-sub" class="a-input" type="number" step="0.01" min="0" value="0" style="width:100%;border-radius:8px">
+          </div>
+          <div>
+            <label style="font-size:12px;color:rgba(255,255,255,.4);display:block;margin-bottom:6px">세금</label>
+            <input id="mt-tax" class="a-input" type="number" step="0.01" min="0" value="0" style="width:100%;border-radius:8px">
+          </div>
+          <div>
+            <label style="font-size:12px;color:rgba(255,255,255,.4);display:block;margin-bottom:6px">크레딧 수</label>
+            <input id="mt-credits" class="a-input" type="number" min="1" value="1" style="width:100%;border-radius:8px">
+          </div>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
+        <div>
+          <label style="font-size:12px;color:rgba(255,255,255,.4);display:block;margin-bottom:6px">상태</label>
+          <select id="mt-status" class="a-select" style="width:100%;border-radius:8px">
+            <option value="paid">결제완료 (paid)</option>
+            <option value="confirmed">확인완료 (confirmed)</option>
+            <option value="pending">대기중 (pending)</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size:12px;color:rgba(255,255,255,.4);display:block;margin-bottom:6px">Stripe Ref (선택)</label>
+          <input id="mt-ref" class="a-input" type="text" placeholder="pi_xxx 또는 cs_xxx" style="width:100%;border-radius:8px">
+        </div>
+      </div>
+      <div style="margin-bottom:14px">
+        <label style="font-size:12px;color:rgba(255,255,255,.4);display:block;margin-bottom:6px">메모</label>
+        <input id="mt-note" class="a-input" type="text" placeholder="예: Stripe 실결제 복구, 수동 크레딧 복원…" style="width:100%;border-radius:8px">
+      </div>
+      <div style="background:rgba(99,102,241,.1);border:1px solid rgba(99,102,241,.25);border-radius:8px;padding:10px 14px;font-size:12px;color:rgba(255,255,255,.5)">
+        ⚠️ 이 기능은 실제 DB에 거래 기록을 추가하고 크레딧을 지급합니다.
+      </div>
+    </div>
+    <div class="admin-modal-ft">
+      <button class="abtn" onclick="doManualTxn()" style="background:#6366F1;color:#fff">➕ 거래 추가 + 크레딧 지급</button>
+      <button class="abtn abtn-w" onclick="closeManualTxnModal()">취소</button>
+    </div>
+  </div>
+</div>
+
+<div id="give-credits-modal" class="admin-modal" onclick="if(event.target===this)closeGiveCreditsModal()">
+  <div class="admin-modal-box">
+    <div class="admin-modal-hd">
+      <div style="font-size:16px;font-weight:800;color:#fff">🎁 무료 크레딧 지급</div>
+      <button class="admin-modal-close" onclick="closeGiveCreditsModal()">✕</button>
+    </div>
+    <div class="admin-modal-body">
+      <div style="margin-bottom:14px">
+        <label style="font-size:12px;color:rgba(255,255,255,.4);display:block;margin-bottom:6px">고용주 선택 *</label>
+        <select id="gc-employer" class="a-select" style="width:100%;border-radius:8px"></select>
+      </div>
+      <div style="margin-bottom:14px">
+        <label style="font-size:12px;color:rgba(255,255,255,.4);display:block;margin-bottom:6px">지급 크레딧 수 *</label>
+        <input id="gc-amount" class="a-input" type="number" min="1" max="100" value="1" style="width:100%;border-radius:8px">
+      </div>
+      <div style="margin-bottom:14px">
+        <label style="font-size:12px;color:rgba(255,255,255,.4);display:block;margin-bottom:6px">지급 사유</label>
+        <input id="gc-reason" class="a-input" type="text" placeholder="예: 신규 가입, CS 보상, 이벤트…" style="width:100%;border-radius:8px">
+      </div>
+    </div>
+    <div class="admin-modal-ft">
+      <button class="abtn abtn-g" onclick="doGiveCredits()">🎁 지급하기</button>
+      <button class="abtn abtn-w" onclick="closeGiveCreditsModal()">취소</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ ADMIN: Interac Transfer Registration Modal ══ -->
+<div id="interac-modal" class="admin-modal" onclick="if(event.target===this)closeInteracModal()">
+  <div class="admin-modal-box" style="max-width:520px">
+    <div class="admin-modal-hd">
+      <div style="font-size:16px;font-weight:800;color:#fff">🏦 Pending Payments</div>
+      <button class="admin-modal-close" onclick="closeInteracModal()">✕</button>
+    </div>
+    <div class="admin-modal-body" style="padding:0">
+      <div id="interac-pending-list" style="max-height:70vh;overflow-y:auto"></div>
+    </div>
+    <div class="admin-modal-ft">
+      <button class="abtn abtn-w" onclick="closeInteracModal()">← Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ ADMIN: Job Detail Modal ══ -->
+<div id="admin-job-modal" class="admin-modal" onclick="if(event.target===this)closeAdminJobModal()">
+  <div class="admin-modal-box" style="max-width:640px">
+    <div class="admin-modal-hd">
+      <div style="font-family:'Plus Jakarta Sans',system-ui,sans-serif;font-size:17px;font-weight:800;color:#fff" id="ajm-title">Job Title</div>
+      <button class="admin-modal-close" onclick="closeAdminJobModal()">✕</button>
+    </div>
+    <!-- 탭 -->
+    <div style="display:flex;gap:0;border-bottom:1px solid rgba(255,255,255,.1);padding:0 20px">
+      <button id="ajm-tab-content" onclick="ajmTab('content')" style="background:none;border:none;color:#fff;font-size:13px;font-weight:700;padding:10px 16px;cursor:pointer;border-bottom:2px solid #60A5FA;opacity:1">📄 공고 내용</button>
+      <button id="ajm-tab-history" onclick="ajmTab('history')" style="background:none;border:none;color:rgba(255,255,255,.4);font-size:13px;font-weight:600;padding:10px 16px;cursor:pointer;border-bottom:2px solid transparent">🕒 세부사항</button>
+    </div>
+    <!-- 공고 내용 탭 -->
+    <div id="ajm-pane-content" class="admin-modal-body">
+      <div class="amrow"><span class="amlabel">포지션</span><span id="ajm-position" class="amval"></span></div>
+      <div class="amrow"><span class="amlabel">공고 회사명</span><span id="ajm-company" class="amval"></span></div>
+      <div class="amrow"><span class="amlabel">등록 계정</span><span id="ajm-account" class="amval" style="color:#60A5FA"></span></div>
+      <div class="amrow"><span class="amlabel">계정 회사</span><span id="ajm-acc-company" class="amval" style="color:rgba(255,255,255,.5)"></span></div>
+      <div class="amrow"><span class="amlabel">근무지</span><span id="ajm-loc" class="amval"></span></div>
+      <div class="amrow"><span class="amlabel">사업장</span><span id="ajm-biz-loc" class="amval"></span></div>
+      <div class="amrow"><span class="amlabel">유형</span><span id="ajm-type" class="amval"></span></div>
+      <div class="amrow"><span class="amlabel">카테고리</span><span id="ajm-cat" class="amval"></span></div>
+      <div class="amrow"><span class="amlabel">급여</span><span id="ajm-salary" class="amval" style="color:#4ADE80;font-weight:700"></span></div>
+      <div class="amrow"><span class="amlabel">언어</span><span id="ajm-lang" class="amval"></span></div>
+      <div class="amrow"><span class="amlabel">학력</span><span id="ajm-edu" class="amval"></span></div>
+      <div class="amrow"><span class="amlabel">경력</span><span id="ajm-exp-req" class="amval"></span></div>
+      <div class="amrow"><span class="amlabel">지원 방법</span><span id="ajm-apply" class="amval"></span></div>
+      <div class="amrow"><span class="amlabel">상태</span><span id="ajm-status" class="amval"></span></div>
+      <div style="margin-top:14px">
+        <div class="amlabel" style="margin-bottom:6px">공고 설명</div>
+        <div id="ajm-desc" style="font-size:13px;color:rgba(255,255,255,.5);line-height:1.7;background:rgba(255,255,255,.04);border-radius:8px;padding:12px;max-height:140px;overflow-y:auto"></div>
+      </div>
+    </div>
+    <!-- 세부사항 탭 -->
+    <div id="ajm-pane-history" class="admin-modal-body" style="display:none">
+      <div class="amrow"><span class="amlabel">공고 ID</span><span id="ajmh-id" class="amval" style="color:rgba(255,255,255,.4)"></span></div>
+      <div class="amrow"><span class="amlabel">최초 등록일</span><span id="ajmh-posted" class="amval"></span></div>
+      <div class="amrow"><span class="amlabel">만료 예정일</span><span id="ajmh-exp" class="amval"></span></div>
+      <div class="amrow"><span class="amlabel">현재 상태</span><span id="ajmh-status" class="amval"></span></div>
+      <div style="margin-top:16px">
+        <div class="amlabel" style="margin-bottom:8px">📋 변경 이력</div>
+        <div id="ajmh-log" style="font-size:12px;color:rgba(255,255,255,.5);line-height:1.8;background:rgba(255,255,255,.04);border-radius:8px;padding:12px;max-height:200px;overflow-y:auto"></div>
+      </div>
+    </div>
+    <div class="admin-modal-ft">
+      <button id="ajm-close-btn" class="abtn abtn-r">공고 마감</button>
+      <button id="ajm-reopen-btn" class="abtn abtn-g" style="display:none">공고 재오픈</button>
+      <button id="ajm-delete-btn" class="abtn abtn-r">Delete</button>
+      <button class="abtn abtn-w" onclick="closeAdminJobModal()">닫기</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ ADMIN: Credit Detail Modal ══ -->
+<div id="admin-credit-modal" class="admin-modal" onclick="if(event.target===this)closeAdminCreditModal()">
+  <div class="admin-modal-box" style="max-width:580px">
+    <div class="admin-modal-hd">
+      <div style="font-size:16px;font-weight:800;color:#fff">🎫 크레딧 상세 — <span id="acm-company"></span></div>
+      <button class="admin-modal-close" onclick="closeAdminCreditModal()">✕</button>
+    </div>
+    <div class="admin-modal-body">
+      <div style="display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap">
+        <div style="flex:1;min-width:100px;background:rgba(74,222,128,.1);border:1px solid rgba(74,222,128,.2);border-radius:10px;padding:12px 16px;text-align:center">
+          <div style="font-size:22px;font-weight:900;color:#4ADE80" id="acm-total">0</div>
+          <div style="font-size:11px;color:rgba(255,255,255,.4);margin-top:2px">총 크레딧</div>
+        </div>
+        <div style="flex:1;min-width:100px;background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.2);border-radius:10px;padding:12px 16px;text-align:center">
+          <div style="font-size:22px;font-weight:900;color:#F87171" id="acm-used">0</div>
+          <div style="font-size:11px;color:rgba(255,255,255,.4);margin-top:2px">사용</div>
+        </div>
+        <div style="flex:1;min-width:100px;background:rgba(96,165,250,.1);border:1px solid rgba(96,165,250,.2);border-radius:10px;padding:12px 16px;text-align:center">
+          <div style="font-size:22px;font-weight:900;color:#60A5FA" id="acm-remain">0</div>
+          <div style="font-size:11px;color:rgba(255,255,255,.4);margin-top:2px">잔여</div>
+        </div>
+      </div>
+      <div class="amlabel" style="margin-bottom:8px">📜 크레딧 획득/사용 이력</div>
+      <div id="acm-log" style="font-size:12px;line-height:1.9;background:rgba(255,255,255,.04);border-radius:8px;padding:12px;max-height:260px;overflow-y:auto"></div>
+    </div>
+    <div class="admin-modal-ft">
+      <button class="abtn abtn-w" onclick="closeAdminCreditModal()">닫기</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ ADMIN: Employer Detail Modal ══ -->
+<div id="admin-emp-modal" class="admin-modal" onclick="if(event.target===this)closeAdminEmpModal()">
+  <div class="admin-modal-box" style="max-width:560px">
+    <div class="admin-modal-hd">
+      <div style="font-family:'Plus Jakarta Sans',system-ui,sans-serif;font-size:17px;font-weight:800;color:#fff" id="aem-company">Company</div>
+      <button class="admin-modal-close" onclick="closeAdminEmpModal()">✕</button>
+    </div>
+    <div class="admin-modal-body">
+      <!-- 기본 정보 -->
+      <div class="amrow"><span class="amlabel">이메일 (아이디)</span><span id="aem-email" class="amval" style="color:#60A5FA"></span></div>
+      <div class="amrow"><span class="amlabel">지역</span><span id="aem-prov" class="amval"></span></div>
+      <div class="amrow"><span class="amlabel">가입일</span><span id="aem-joined" class="amval"></span></div>
+      <div class="amrow"><span class="amlabel">상태</span><span id="aem-status" class="amval"></span></div>
+
+      <!-- 회사명 변경 이력 -->
+      <div style="font-size:10px;font-weight:800;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:1px;margin:16px 0 8px">✏️ 회사/에이전시명 변경 이력</div>
+      <div id="aem-name-log" style="background:rgba(255,255,255,.04);border-radius:8px;padding:10px 12px;max-height:120px;overflow-y:auto"></div>
+
+      <!-- 공고 현황 -->
+      <div style="font-size:10px;font-weight:800;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:1px;margin:16px 0 8px">📋 공고 현황</div>
+      <div class="amrow"><span class="amlabel">총 공고</span><span id="aem-postings" class="amval"></span></div>
+      <div id="aem-jobs-list" style="margin-top:6px"></div>
+
+      <!-- 크레딧 현황 -->
+      <div style="font-size:10px;font-weight:800;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:1px;margin:16px 0 8px">💳 크레딧 현황</div>
+      <div class="amrow"><span class="amlabel">총 충전</span><span id="aem-credits-total" class="amval" style="color:#4ADE80;font-weight:700"></span></div>
+      <div class="amrow"><span class="amlabel">사용</span><span id="aem-credits-used" class="amval"></span></div>
+      <div class="amrow"><span class="amlabel">잔여</span><span id="aem-credits-remain" class="amval" style="color:#60A5FA;font-weight:700"></span></div>
+      <div class="amrow"><span class="amlabel">총 결제액</span><span id="aem-spent" class="amval" style="color:#4ADE80;font-weight:700"></span></div>
+
+      <!-- 결제 내역 -->
+      <div style="font-size:10px;font-weight:800;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:1px;margin:16px 0 8px">🧾 결제 내역</div>
+      <div id="aem-txns-list"></div>
+
+      <!-- 대기 결제 (Interac / PayPal) -->
+      <div id="aem-pending-section" style="display:none">
+        <div style="font-size:10px;font-weight:800;color:#FBB924;text-transform:uppercase;letter-spacing:1px;margin:16px 0 8px">⚠️ 입금 대기 중</div>
+        <div id="aem-pending-list"></div>
+      </div>
+    </div>
+    <div class="admin-modal-ft">
+      <button id="aem-suspend-btn" class="abtn abtn-r">계정 정지</button>
+      <button id="aem-reinstate-btn" class="abtn abtn-g" style="display:none">정지 해제</button>
+      <button class="abtn abtn-b" onclick="openGiveCreditsForEmp()">🎁 크레딧 지급</button>
+      <button class="abtn abtn-w" onclick="closeAdminEmpModal()">닫기</button>
+    </div>
+  </div>
+</div>
 
 <!-- ══════════════════════════════════════════════════ -->
 <!--  PRIVACY POLICY                                   -->
@@ -5336,6 +8641,61 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 <!-- ══════════════════════════════════════════════════ -->
 
 <!-- Compliance Modal -->
+<!-- 수동 거래 추가 모달 -->
+<div class="overlay" id="modal-add-txn" role="dialog" aria-modal="true">
+  <div class="modal-box" style="max-width:480px;background:#1a1a2e;color:#fff">
+    <div class="modal-head">
+      <h2>➕ 수동 거래 추가</h2>
+      <button class="modal-close" onclick="closeModal('modal-add-txn')" aria-label="Close">✕</button>
+    </div>
+    <div class="modal-body" style="display:flex;flex-direction:column;gap:10px">
+      <label style="font-size:12px;color:rgba(255,255,255,.5)">이메일 *</label>
+      <input class="a-input" type="email" id="atxn-email" placeholder="employer@example.com">
+      <label style="font-size:12px;color:rgba(255,255,255,.5)">회사명</label>
+      <input class="a-input" type="text" id="atxn-company" placeholder="Company name">
+      <div style="display:flex;gap:10px">
+        <div style="flex:1"><label style="font-size:12px;color:rgba(255,255,255,.5)">패키지</label>
+          <select class="a-select" id="atxn-pkg" style="width:100%">
+            <option value="single">Single (1 credit)</option>
+            <option value="starter">Starter (3 credits)</option>
+            <option value="growth">Growth (5 credits)</option>
+            <option value="pro">Pro (10 credits)</option>
+            <option value="custom">Custom</option>
+          </select>
+        </div>
+        <div style="flex:1"><label style="font-size:12px;color:rgba(255,255,255,.5)">크레딧 수</label>
+          <input class="a-input" type="number" id="atxn-credits" value="1" min="1">
+        </div>
+      </div>
+      <div style="display:flex;gap:10px">
+        <div style="flex:1"><label style="font-size:12px;color:rgba(255,255,255,.5)">금액 ($)</label>
+          <input class="a-input" type="number" id="atxn-amount" value="0" min="0" step="0.01">
+        </div>
+        <div style="flex:1"><label style="font-size:12px;color:rgba(255,255,255,.5)">결제수단</label>
+          <select class="a-select" id="atxn-method" style="width:100%">
+            <option value="card">💳 Card</option>
+            <option value="interac">🏦 Interac</option>
+            <option value="paypal">🅿 PayPal</option>
+            <option value="free">🎁 Free</option>
+          </select>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px">
+        <div style="flex:1"><label style="font-size:12px;color:rgba(255,255,255,.5)">상태</label>
+          <select class="a-select" id="atxn-status" style="width:100%">
+            <option value="paid">✅ 결제완료</option>
+            <option value="pending">⏳ 대기중</option>
+            <option value="confirmed">✅ 확인완료</option>
+          </select>
+        </div>
+      </div>
+      <label style="font-size:12px;color:rgba(255,255,255,.5)">메모</label>
+      <input class="a-input" type="text" id="atxn-note" placeholder="수동 추가 사유 (선택)">
+      <button class="abtn abtn-g" style="margin-top:8px;width:100%;padding:12px" onclick="submitAddTxn()">💾 거래 추가 + 크레딧 지급</button>
+    </div>
+  </div>
+</div>
+
 <div class="overlay" id="modal-compliance" role="dialog" aria-modal="true" aria-labelledby="mc-title">
   <div class="modal-box">
     <div class="modal-head">
@@ -5673,7 +9033,7 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 <footer id="site-footer" role="contentinfo">
   <div class="footer-top">
     <div>
-      <div class="yh-logo yh-logo-dark" style="margin-bottom:12px">
+      <div class="yh-logo yh-logo-dark" onclick="logoAdminTap()" style="margin-bottom:12px" title="">
         <svg class="yh-logo-mark" viewBox="0 0 32 32" fill="none" aria-hidden="true">
           <rect x="1" y="1" width="30" height="30" rx="9" fill="#2563EB"/>
           <path d="M10.5 9.5 L16 16 L21.5 9.5" stroke="#fff" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/>
@@ -5704,7 +9064,7 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
     </div>
   </div>
   <div class="footer-mobile-links" style="display:none;flex-wrap:wrap;gap:4px 14px;margin-bottom:16px;align-items:center">
-    <div class="yh-logo yh-logo-dark" style="width:100%;margin-bottom:8px">
+    <div class="yh-logo yh-logo-dark" onclick="logoAdminTap()" style="width:100%;margin-bottom:8px">
       <svg class="yh-logo-mark" viewBox="0 0 32 32" fill="none" aria-hidden="true" style="width:22px;height:22px">
         <rect x="1" y="1" width="30" height="30" rx="9" fill="#2563EB"/>
         <path d="M10.5 9.5 L16 16 L21.5 9.5" stroke="#fff" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/>
@@ -5719,6 +9079,7 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
       © 2025–2026 YouthHire (canadayouthhire.ca). All rights reserved. Operated by MOSAIC CANADA RESTAURANT INC.<br>
       Governed by <em>PIPEDA</em>, <em>CHRA</em>, and applicable provincial employment standards law.<br>
       <span style="font-size:10px;opacity:.5">Contains information licensed under the <a href="https://open.canada.ca/en/open-government-licence-canada" target="_blank" style="color:inherit;text-decoration:underline">Open Government Licence — Canada</a>.</span>
+      <span class="admin-dot" onclick="logoAdminTap()" title="Admin" aria-label="Admin access"></span>
     </div>
     <div class="footer-right">Youth Employment<br>🍁 Proudly Canadian · Data stored in Canada</div>
   </div>
