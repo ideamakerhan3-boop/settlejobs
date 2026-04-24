@@ -65,6 +65,7 @@
     "api/refund.js":         { "maxDuration": 15, "memory": 256 },
     "api/auth-api.js":       { "maxDuration": 10, "memory": 512 },
     "api/admin-api.js":      { "maxDuration": 15, "memory": 512 },
-    "api/credits-api.js":    { "maxDuration": 15, "memory": 512 }
+    "api/credits-api.js":    { "maxDuration": 15, "memory": 512 },
+    "api/list-jobs.js":      { "maxDuration": 10, "memory": 256 }
   }
 }
