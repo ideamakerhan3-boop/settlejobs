@@ -1887,7 +1887,18 @@ function renderJobs(list, append) {
   if(cntEl) cntEl.textContent = list.length + ' job' + (list.length !== 1 ? 's' : '');
 
   if(!list.length) {
-    el.innerHTML = '<div style="padding:48px 20px;text-align:center"><div style="font-size:36px;margin-bottom:12px">🔍</div><p style="font-weight:700;font-size:15px;margin-bottom:6px">No jobs found</p><p style="font-size:13px;color:var(--muted);margin-bottom:16px">Try different keywords or clear filters.</p><button onclick="clearFilters()" style="background:var(--red);color:#fff;border:none;border-radius:8px;padding:10px 22px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">Clear All Filters</button></div>';
+    // Distinguish launch-phase empty (no jobs in DB yet, no active filters)
+    // from search-empty (filters active, just no matches). The former should
+    // feel welcoming, not broken.
+    var _hasKw = (document.getElementById('s-kw')||{value:''}).value.trim();
+    var _hasLoc = (document.getElementById('s-prov')||{value:''}).value.trim();
+    var _hasFilters = document.querySelectorAll('.f-type:checked, .f-src:checked, .f-cat:checked, .hero-pill.active').length > 0;
+    var _noDataAtAll = (ALL_JOBS||[]).length === 0;
+    if(_noDataAtAll && !_hasKw && !_hasLoc && !_hasFilters){
+      el.innerHTML = '<div style="padding:56px 20px;text-align:center"><div style="font-size:42px;margin-bottom:14px">🚀</div><p style="font-weight:800;font-size:17px;margin-bottom:6px;color:var(--ink)">Launching now</p><p style="font-size:13.5px;color:var(--muted);max-width:320px;margin:0 auto 18px;line-height:1.55">We just opened. Be one of the first employers to reach Canadian youth — your posting shows up instantly.</p><button onclick="(window._isLoggedIn?go(\'post-job\'):go(\'register\'))" style="background:var(--red);color:#fff;border:none;border-radius:10px;padding:12px 24px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">Post the First Job →</button></div>';
+    } else {
+      el.innerHTML = '<div style="padding:48px 20px;text-align:center"><div style="font-size:36px;margin-bottom:12px">🔍</div><p style="font-weight:700;font-size:15px;margin-bottom:6px">No jobs match your filters</p><p style="font-size:13px;color:var(--muted);margin-bottom:16px">Try different keywords, widen your location, or clear filters.</p><button onclick="clearFilters()" style="background:var(--red);color:#fff;border:none;border-radius:8px;padding:10px 22px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">Clear All Filters</button></div>';
+    }
     if(lbtn) lbtn.style.display = 'none';
     return;
   }
@@ -6492,6 +6503,49 @@ function autoExpireJobs() {
   return changed;
 }
 
+// Fetch all active jobs for the public home feed. Unauthenticated, cached
+// server-side for 60s. Fills JOBS, so anonymous visitors see listings
+// without needing to sign in.
+async function loadPublicJobs() {
+  try {
+    var r = await fetch('/api/list-jobs?limit=200', { method: 'GET', headers: { 'Accept': 'application/json' } });
+    if (!r.ok) return;
+    var d = await r.json().catch(function(){ return null; });
+    if (!d || !Array.isArray(d.jobs)) return;
+    d.jobs.forEach(function(dj){
+      if (JOBS.some(function(j){ return String(j.id) === String(dj.job_id); })) return;
+      JOBS.push({
+        id: dj.job_id, title: dj.title, company: dj.company,
+        loc: dj.loc || '', prov: dj.prov || '',
+        bizCity: dj.biz_city || (dj.loc ? dj.loc.split(',')[0].trim() : ''),
+        bizProv: dj.biz_prov || dj.prov || '',
+        type: dj.type || 'Full-Time', cat: dj.category || 'Other',
+        desc: dj.description || '',
+        salary: dj.wage || '', salaryNum: 0,
+        icon: (typeof CAT_ICONS !== 'undefined' && CAT_ICONS[dj.category]) || '💼',
+        status: dj.status || 'active',
+        date: dj.posted_date || '', exp: dj.exp_date || '',
+        src: 'local', url: null,
+        applyMethod: dj.apply_method || 'email',
+        // Only expose apply_url publicly; apply_email stays server-side
+        // until the detail page loads (where job-page.js provides it).
+        email: '',
+        applyUrl: dj.apply_method === 'url' ? (dj.apply_url || '') : '',
+        lang: dj.lang || 'English', edu: dj.edu || 'None',
+        expReq: dj.exp_req || 'No experience', vacancy: dj.vacancy || 'new',
+        ai: dj.ai_use || 'no', remote: dj.remote || 'onsite',
+        req: dj.requirements ? String(dj.requirements).split('\n').filter(Boolean) : [],
+        ben: dj.benefits ? String(dj.benefits).split('\n').filter(Boolean) : [],
+        statusLog: [], postedByEmail: '', postedByAccCompany: ''
+      });
+    });
+    ALL_JOBS = JOBS.concat(JOBBANK_JOBS);
+    if (curPage === 'home') { try { doSearch(); } catch(e) {} }
+  } catch (e) {
+    console.error('loadPublicJobs error:', e);
+  }
+}
+
 function _initApp() {
   // checkout=success 시 footer/메인 즉시 숨김
   if(window.location.search.indexOf('checkout=success')>=0){
@@ -6500,6 +6554,8 @@ function _initApp() {
   }
   try{ _loadCachedJobBank(); } catch(e){}
   try{ autoExpireJobs(); } catch(e){}
+  // Public listings — anonymous visitors and logged-in users both need this
+  loadPublicJobs();
 
   // 새로고침 후 로그인 상태 복원
   try{
