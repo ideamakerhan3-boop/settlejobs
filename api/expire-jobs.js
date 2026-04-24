@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { purgeExpiredRateLimits } from './_lib/ratelimit.js';
 
 const sb = createClient(
   process.env.SUPABASE_URL,
@@ -71,6 +72,9 @@ export default async function handler(req, res) {
   }
 
   try {
+    // Daily sweep of stale rate-limit rows (cheap, no index contention)
+    await purgeExpiredRateLimits(sb).catch(function(e){ console.warn('rate_limits purge failed:', e.message); });
+
     const now = new Date();
     // Select only needed columns
     const { data: activeJobs, error } = await sb
