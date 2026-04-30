@@ -37,7 +37,11 @@ export async function sendTransactionalEmail({ template_id, template_params }) {
     });
     if (!resp.ok) {
       const body = await resp.text().catch(() => '');
-      console.error('email: send failed', resp.status, body.substring(0, 300));
+      // Log on multiple lines so Vercel's table view doesn't truncate the
+      // body to "The …" — split into status line + body line + meta line.
+      console.error('email: send failed status=' + resp.status);
+      console.error('email: response body=' + (body || '').substring(0, 500).replace(/\s+/g, ' '));
+      console.error('email: meta tmpl=' + tmpl + ' service=' + serviceId + ' to=' + template_params.to_email);
       return false;
     }
     return true;
