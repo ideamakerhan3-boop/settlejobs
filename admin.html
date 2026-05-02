@@ -2337,8 +2337,9 @@ function _doRegisterFinish(em, pw, name, co, ds, promoCode) {
     localStorage.setItem('cjb_company', co);
   }catch(e){}
 
-  // 가입 보너스: signup_bonus API로 1크레딧 지급 (서버에서 크레딧+트랜잭션 모두 처리)
-  _totalCredits = 1; _usedCredits = 0; syncCredits();
+  // 가입 보너스: register 응답에 이미 credits.total=5 포함됨 (서버 atomic).
+  // signup_bonus 호출은 register가 credit grant 단계에서 실패한 경우 복구용 (idempotent).
+  _totalCredits = 5; _usedCredits = 0; syncCredits();
   _creditsApi({action:'signup_bonus', email:em, pw_hash:pw}).then(function(bonusRes){
     if(bonusRes) { _totalCredits=bonusRes.total; _usedCredits=bonusRes.used; syncCredits(); }
     // 프로모 코드 적용 (가입 보너스 완료 후)

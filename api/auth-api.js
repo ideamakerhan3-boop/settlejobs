@@ -116,7 +116,40 @@ export default async function handler(req, res) {
         return res.status(500).json({ error: 'Failed to create account' });
       }
 
-      return res.status(200).json({ ok: true, email: em, name: name || '', company: company || '', is_admin: false });
+      // Grant 5 free signup credits atomically. transactions.ref has a UNIQUE
+      // constraint on 'SIGNUP-<email>' so this is idempotent — the legacy
+      // /api/credits-api signup_bonus path stays as a defensive recovery and
+      // won't double-grant.
+      let signupTotal = 0, signupUsed = 0;
+      try {
+        const { error: txErr } = await sb.from('transactions').insert({
+          email: em, pkg: 'Welcome 5 Credits', credits: 5,
+          method: 'free', status: 'paid', amount: '0',
+          ref: 'SIGNUP-' + em, created_at: new Date().toISOString()
+        });
+        if (!txErr) {
+          // First-time grant — account is brand new so no concurrent credit writers.
+          await sb.from('credits').upsert(
+            { email: em, total: 5, used: 0, updated_at: new Date().toISOString() },
+            { onConflict: 'email' }
+          );
+          signupTotal = 5;
+        } else {
+          // SIGNUP tx already existed (recovery path) — just read current state.
+          const { data: cr } = await sb.from('credits').select('total, used').eq('email', em).maybeSingle();
+          signupTotal = cr?.total || 0;
+          signupUsed = cr?.used || 0;
+        }
+      } catch (e) {
+        console.error('register: signup credit grant failed for', em, e.message);
+        // Account exists but credits not granted. Client's existing signup_bonus
+        // call recovers. Don't block register.
+      }
+
+      return res.status(200).json({
+        ok: true, email: em, name: name || '', company: company || '', is_admin: false,
+        credits: { total: signupTotal, used: signupUsed }
+      });
     }
 
     // ──────────────── ADMIN LOGIN BY PW ONLY (legacy 6-logo-click flow) ────────────────
