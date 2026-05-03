@@ -6722,8 +6722,12 @@ function _initApp() {
       updateIssueBadge();
     }
   }).catch(function(){});
-  // DB에서 모든 active 공고 불러오기 (로그인 여부 상관없이)
-  _sb.from('jobs').select('*').eq('status','active').then(function(res){
+  // DB에서 모든 active 공고 불러오기 (로그인 여부 상관없이).
+  // PII 차단: 명시 화이트리스트 (28 cols) — `email`, `notified_expiry` 제외.
+  // see: Cortex/wiki/lessons/postgrest-column-grant-order.md
+  _sb.from('jobs')
+     .select('id,job_id,title,company,loc,prov,type,wage,category,description,status,posted_date,exp_date,created_at,apply_method,apply_email,apply_url,lang,edu,exp_req,vacancy,ai_use,remote,requirements,benefits,biz_city,biz_prov,posted_by_acc_company')
+     .eq('status','active').then(function(res){
     var dbJobs = res.data || [];
     dbJobs.forEach(function(dj){
       var exists = JOBS.some(function(j){ return String(j.id)===String(dj.job_id); });
@@ -6733,7 +6737,7 @@ function _initApp() {
           loc: dj.loc||'', prov: dj.prov||'', type: dj.type||'Full-Time',
           cat: dj.category||'Other', desc: dj.description||'',
           status: dj.status||'active', date: dj.posted_date||'',
-          exp: dj.exp_date||'', postedByEmail: dj.email, src: 'local',
+          exp: dj.exp_date||'', postedByEmail: '', src: 'local',
           salary: dj.wage||'', salaryNum: 0, icon: CAT_ICONS[dj.category]||'💼',
           bizCity: dj.biz_city || (dj.loc ? dj.loc.split(',')[0].trim() : ''),
           bizProv: dj.biz_prov || dj.prov||'',
