@@ -4382,8 +4382,14 @@ function _initApp() {
   var sf = document.getElementById('site-footer'); if(sf) sf.style.display = 'block';
   var sn = document.getElementById('site-nav'); if(sn) sn.style.display = '';
   // (Issue-job loading removed — admin-only feature now lives in /admin)
-  // DB에서 모든 active 공고 불러오기 (로그인 여부 상관없이)
-  _sb.from('jobs').select('*').eq('status','active').then(function(res){
+  // DB에서 모든 active 공고 불러오기 (로그인 여부 상관없이).
+  // PII 차단: 명시 화이트리스트 (28 cols) — `email`, `notified_expiry` 제외.
+  // dbGetJobs (인증 경로, list_own_jobs)가 본인 공고 한정으로 email 채워서
+  // postedByEmail 기반 dashboard 필터(line ~2041)를 정확히 유지함.
+  // see: Cortex/wiki/lessons/postgrest-column-grant-order.md
+  _sb.from('jobs')
+     .select('id,job_id,title,company,loc,prov,type,wage,category,description,status,posted_date,exp_date,created_at,apply_method,apply_email,apply_url,lang,edu,exp_req,vacancy,ai_use,remote,requirements,benefits,biz_city,biz_prov,posted_by_acc_company')
+     .eq('status','active').then(function(res){
     var dbJobs = res.data || [];
     dbJobs.forEach(function(dj){
       var exists = JOBS.some(function(j){ return String(j.id)===String(dj.job_id); });
@@ -4393,7 +4399,9 @@ function _initApp() {
           loc: dj.loc||'', prov: dj.prov||'', type: dj.type||'Full-Time',
           cat: dj.category||'Other', desc: dj.description||'',
           status: dj.status||'active', date: dj.posted_date||'',
-          exp: dj.exp_date||'', postedByEmail: dj.email, src: 'local',
+          // postedByEmail intentionally '' on public path — dbGetJobs (auth) merges
+          // owner's email back in via line 4241 fallback for "My Listings" filter.
+          exp: dj.exp_date||'', postedByEmail: '', src: 'local',
           salary: dj.wage||'', salaryNum: 0, icon: CAT_ICONS[dj.category]||'💼',
           bizCity: dj.biz_city || (dj.loc ? dj.loc.split(',')[0].trim() : ''),
           bizProv: dj.biz_prov || dj.prov||'',
