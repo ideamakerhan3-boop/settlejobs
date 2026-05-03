@@ -4538,7 +4538,7 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
         <div class="hh-searchbig-divider"></div>
         <div class="hh-searchbig-locwrap">
           <span class="hh-searchbig-ico">📍</span>
-          <input type="text" id="s-prov" class="hh-searchbig-input" placeholder="City, province, or remote" autocomplete="off" aria-label="Location" oninput="hhLocSuggest(this)" onfocus="hhLocSuggest(this)" onblur="setTimeout(function(){document.getElementById('hh-loc-sugg').classList.remove('open')},150)" onkeydown="hhLocKeys(event)" style="min-width:0">
+          <input type="text" id="s-prov" class="hh-searchbig-input" placeholder="City, province, or remote" autocomplete="off" readonly onfocus="this.removeAttribute('readonly');hhLocSuggest(this)" name="loc-x" aria-label="Location" oninput="hhLocSuggest(this)" onblur="setTimeout(function(){document.getElementById('hh-loc-sugg').classList.remove('open')},150)" onkeydown="hhLocKeys(event)" style="min-width:0">
           <button id="loc-clear" class="hh-searchbig-clear" onclick="document.getElementById('s-prov').value='';this.style.display='none';doSearch()" style="display:none">✕</button>
           <div id="hh-loc-sugg" class="hh-loc-sugg" role="listbox"></div>
         </div>

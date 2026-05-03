@@ -2337,8 +2337,9 @@ function _doRegisterFinish(em, pw, name, co, ds, promoCode) {
     localStorage.setItem('cjb_company', co);
   }catch(e){}
 
-  // 가입 보너스: signup_bonus API로 1크레딧 지급 (서버에서 크레딧+트랜잭션 모두 처리)
-  _totalCredits = 1; _usedCredits = 0; syncCredits();
+  // 가입 보너스: register 응답에 이미 credits.total=5 포함됨 (서버 atomic).
+  // signup_bonus 호출은 register가 credit grant 단계에서 실패한 경우 복구용 (idempotent).
+  _totalCredits = 5; _usedCredits = 0; syncCredits();
   _creditsApi({action:'signup_bonus', email:em, pw_hash:pw}).then(function(bonusRes){
     if(bonusRes) { _totalCredits=bonusRes.total; _usedCredits=bonusRes.used; syncCredits(); }
     // 프로모 코드 적용 (가입 보너스 완료 후)
@@ -6878,7 +6879,7 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
         <div class="hh-searchbig-divider"></div>
         <div class="hh-searchbig-locwrap">
           <span class="hh-searchbig-ico">📍</span>
-          <input type="text" id="s-prov" class="hh-searchbig-input" placeholder="City, province, or remote" autocomplete="off" aria-label="Location" oninput="hhLocSuggest(this)" onfocus="hhLocSuggest(this)" onblur="setTimeout(function(){document.getElementById('hh-loc-sugg').classList.remove('open')},150)" onkeydown="hhLocKeys(event)" style="min-width:0">
+          <input type="text" id="s-prov" class="hh-searchbig-input" placeholder="City, province, or remote" autocomplete="off" readonly onfocus="this.removeAttribute('readonly');hhLocSuggest(this)" name="loc-x" aria-label="Location" oninput="hhLocSuggest(this)" onblur="setTimeout(function(){document.getElementById('hh-loc-sugg').classList.remove('open')},150)" onkeydown="hhLocKeys(event)" style="min-width:0">
           <button id="loc-clear" class="hh-searchbig-clear" onclick="document.getElementById('s-prov').value='';this.style.display='none';doSearch()" style="display:none">✕</button>
           <div id="hh-loc-sugg" class="hh-loc-sugg" role="listbox"></div>
         </div>
