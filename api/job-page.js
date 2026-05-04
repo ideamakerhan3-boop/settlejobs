@@ -32,7 +32,7 @@ export default async function handler(req, res) {
   const url = base + '/jobs/' + id;
 
   // ISO 8601 dates required by Google for Jobs
-  const posted = toISO(job.posted_date) || toISO(job.created_at) || '';
+  const posted = toISO(job.posted_date) || toISO(job.created_at) || new Date().toISOString().split('T')[0];
   const expires = toISO(job.exp_date) || '';
 
   const jobDescHtml = descToHTML(job.description || job.title);
