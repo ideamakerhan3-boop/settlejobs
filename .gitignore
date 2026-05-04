@@ -2,3 +2,6 @@
 .env
 .env.*
 node_modules
+
+# Claude Code worktrees (per-chat ephemeral checkouts)
+.claude/worktrees/
