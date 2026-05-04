@@ -6,24 +6,29 @@ const sb = createClient(
 );
 
 // Only fetch columns needed for SEO rendering
-const JOB_COLS = 'job_id, title, company, loc, prov, type, wage, category, remote, lang, edu, exp_req, description, requirements, benefits, apply_method, apply_url, apply_email, posted_date, created_at, exp_date';
+const JOB_COLS = 'job_id, title, company, loc, prov, type, wage, category, remote, lang, edu, exp_req, description, requirements, benefits, apply_method, apply_url, apply_email, posted_date, created_at, exp_date, status';
+
+const BASE = 'https://www.canadayouthhire.ca';
+const ORG_ID = `${BASE}/#organization`;
 
 /**
- * GET /api/job-page?id=585
- * Serves a pre-rendered HTML page for crawlers with full job details,
- * then redirects real users to the SPA via client-side JS.
+ * GET /jobs/:id  (via vercel.json rewrite → /api/job-page?id=:id)
+ * Serves a pre-rendered HTML page for crawlers with full job details.
+ * Real users (non-bot UA) are redirected to the SPA immediately, server-side.
  */
 const BOT_RE = /bot|crawl|spider|slurp|Googlebot|Bingbot|DuckDuck|Yandex|Baidu|facebookexternalhit|Twitterbot|LinkedInBot/i;
 
 export default async function handler(req, res) {
   const id = req.query.id;
-  if (!id) return res.redirect(301, 'https://www.canadayouthhire.ca/');
+  if (!id) return res.redirect(301, BASE + '/');
 
-  // Server-side bot detection: real users go to the SPA immediately
-  // This avoids the client-side redirect which can confuse JS-rendering crawlers
+  // Server-side bot detection — real users go to the SPA immediately.
+  // Must happen BEFORE any DB query (fast path for humans).
+  // Cache-Control: no-store prevents CDN from serving this UA-variant response
+  // to a different UA (e.g. bot response cached → served to human = broken UX).
   const ua = req.headers['user-agent'] || '';
   if (!BOT_RE.test(ua)) {
-    return res.redirect(302, `https://www.canadayouthhire.ca/?openJob=${id}`);
+    return res.redirect(302, `${BASE}/?openJob=${id}`);
   }
 
   const { data: job } = await sb.from('jobs')
@@ -32,86 +37,132 @@ export default async function handler(req, res) {
     .maybeSingle();
 
   if (!job) {
-    return res.redirect(302, 'https://www.canadayouthhire.ca/');
+    return res.redirect(302, BASE + '/');
   }
 
-  const base = 'https://www.canadayouthhire.ca';
-  const title = esc(job.title) + ' at ' + esc(job.company) + ' — YouthHire';
-  const desc = esc(job.title) + ' job in ' + esc(job.loc || 'Canada') + '. ' + esc(job.type || 'Full-Time') + ' position at ' + esc(job.company) + '. Apply on YouthHire.';
-  const url = base + '/jobs/' + id;
-
   // ISO 8601 dates required by Google for Jobs
-  const posted = toISO(job.posted_date) || toISO(job.created_at) || new Date().toISOString().split('T')[0];
+  const posted  = toISO(job.posted_date) || toISO(job.created_at) || new Date().toISOString().split('T')[0];
   const expires = toISO(job.exp_date) || '';
 
-  const jobDescHtml = descToHTML(job.description || job.title);
-  const salary = parseSalary(job.wage);
+  // Detect expired posting (exp_date in the past)
+  const isExpired = expires && new Date(expires) < new Date();
 
-  // --- JobPosting JSON-LD ---
+  const url   = BASE + '/jobs/' + id;
+  const title = esc(job.title) + ' at ' + esc(job.company) + ' — YouthHire';
+  const desc  = esc(job.title) + ' job in ' + esc(job.loc || 'Canada') + '. '
+              + esc(job.type || 'Full-Time') + ' position at ' + esc(job.company)
+              + '. Apply on YouthHire.';
+
+  const jobDescHtml = descToHTML(job.description || job.title);
+  const salary      = parseSalary(job.wage);
+
+  // ── specialCommitments (Youth-specific signal for Google for Jobs) ──────────
+  const specials = ['Youth Friendly'];
+  if (!job.exp_req || job.exp_req === 'No experience') specials.push('No experience required');
+  if (job.type && /part.time|student|casual/i.test(job.type)) specials.push('Students Welcome');
+
+  // ── JobPosting JSON-LD ───────────────────────────────────────────────────────
   const jsonLdObj = {
     "@context": "https://schema.org",
-    "@type": "JobPosting",
-    "title": job.title,
-    "description": jobDescHtml,           // HTML preferred by Google for Jobs
-    "datePosted": posted,                 // ISO 8601 required
-    "validThrough": expires || undefined, // ISO 8601 required
+    "@type":    "JobPosting",
+    "title":       job.title,
+    "description": jobDescHtml,
+    "datePosted":  posted,
+    "validThrough": expires || undefined,
     "employmentType": mapType(job.type),
+    "specialCommitments": specials.join(', '),
     "identifier": {
       "@type": "PropertyValue",
-      "name": "YouthHire",
+      "name":  "YouthHire",
       "value": String(id)
     },
     "hiringOrganization": {
       "@type": "Organization",
-      "name": job.company,
-      "sameAs": base
+      "@id":   ORG_ID,
+      "name":  job.company,
+      "sameAs": BASE
     },
     "jobLocation": {
       "@type": "Place",
       "address": {
-        "@type": "PostalAddress",
-        "addressLocality": job.loc || '',
-        "addressRegion": job.prov || '',
-        "addressCountry": "CA"
+        "@type":           "PostalAddress",
+        "addressLocality": job.loc  || '',
+        "addressRegion":   job.prov || '',
+        "addressCountry":  "CA"
       }
     },
     "directApply": false,
     "mainEntityOfPage": {
       "@type": "WebPage",
-      "@id": url
+      "@id":   url
     }
   };
 
+  // baseSalary
   if (salary) {
     jsonLdObj.baseSalary = { "@type": "MonetaryAmount", "currency": "CAD", "value": salary };
   }
+
+  // Remote / onsite
   if (job.remote === 'remote' || job.remote === 'Remote') {
     jsonLdObj.jobLocationType = 'TELECOMMUTE';
     jsonLdObj.applicantLocationRequirements = { "@type": "Country", "name": "Canada" };
+  } else {
+    jsonLdObj.jobLocationType = 'ONSITE';
   }
+
+  // Education
   if (job.edu && job.edu !== 'None') {
-    jsonLdObj.educationRequirements = { "@type": "EducationalOccupationalCredential", "credentialCategory": job.edu };
+    jsonLdObj.educationRequirements = {
+      "@type": "EducationalOccupationalCredential",
+      "credentialCategory": job.edu
+    };
   }
+
+  // Experience
   if (job.exp_req && job.exp_req !== 'No experience') {
     jsonLdObj.experienceRequirements = job.exp_req;
   }
 
+  // Benefits (first 200 chars from DB benefits field)
+  if (job.benefits) {
+    jsonLdObj.jobBenefits = job.benefits.replace(/\n/g, ', ').substring(0, 200);
+  }
+
+  // applicationContact
+  if (job.apply_method === 'email' && job.apply_email) {
+    jsonLdObj.applicationContact = {
+      "@type": "ContactPoint",
+      "email": job.apply_email,
+      "contactType": "application"
+    };
+  } else if (job.apply_method === 'url' && job.apply_url && !isUnsafeUri(job.apply_url)) {
+    jsonLdObj.applicationContact = {
+      "@type": "ContactPoint",
+      "url":   job.apply_url,
+      "contactType": "application"
+    };
+  }
+
   const jsonLd = JSON.stringify(jsonLdObj).replace(/<\//g, '<\\/');
 
-  // --- BreadcrumbList JSON-LD ---
+  // ── BreadcrumbList JSON-LD ───────────────────────────────────────────────────
   const breadcrumbLd = JSON.stringify({
     "@context": "https://schema.org",
-    "@type": "BreadcrumbList",
+    "@type":    "BreadcrumbList",
     "itemListElement": [
-      { "@type": "ListItem", "position": 1, "name": "Home", "item": base },
-      { "@type": "ListItem", "position": 2, "name": "Jobs", "item": base + "/" },
+      { "@type": "ListItem", "position": 1, "name": "Home", "item": BASE },
+      { "@type": "ListItem", "position": 2, "name": "Jobs", "item": BASE + "/" },
       { "@type": "ListItem", "position": 3, "name": job.title + " at " + job.company, "item": url }
     ]
   }).replace(/<\//g, '<\\/');
 
-  // Sanitize apply_url to block javascript: URIs
-  const safeApplyUrl = job.apply_url && !isUnsafeUri(job.apply_url) ? esc(job.apply_url) : '';
+  // Sanitize apply_url
+  const safeApplyUrl   = job.apply_url && !isUnsafeUri(job.apply_url) ? esc(job.apply_url) : '';
   const jobDescEscaped = esc((job.description || '').substring(0, 500));
+
+  // Robots: noindex for expired postings (keeps link equity via follow)
+  const robotsContent = isExpired ? 'noindex, follow' : 'index, follow';
 
   const html = `<!DOCTYPE html>
 <html lang="en">
@@ -121,6 +172,7 @@ export default async function handler(req, res) {
 <title>${title}</title>
 <meta name="description" content="${desc}">
 <link rel="canonical" href="${url}">
+<meta name="robots" content="${robotsContent}">
 <meta property="og:type" content="article">
 <meta property="og:title" content="${title}">
 <meta property="og:description" content="${desc}">
@@ -130,7 +182,6 @@ export default async function handler(req, res) {
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="${title}">
 <meta name="twitter:description" content="${desc}">
-<meta name="robots" content="index, follow">
 <script type="application/ld+json">${jsonLd}</script>
 <script type="application/ld+json">${breadcrumbLd}</script>
 <style>
@@ -141,18 +192,21 @@ h1{color:#2563EB;font-size:28px;margin-bottom:4px}
 .meta span{margin-right:16px}
 .desc{white-space:pre-wrap;margin-bottom:32px}
 .cta{display:inline-block;background:#2563EB;color:#fff;padding:14px 28px;border-radius:10px;text-decoration:none;font-weight:700;font-size:16px}
+.expired-banner{background:#FEF3C7;border:1px solid #F59E0B;border-radius:8px;padding:12px 16px;margin-bottom:24px;font-weight:600;color:#92400E}
 .footer{margin-top:48px;padding-top:20px;border-top:1px solid #E2E2DC;font-size:13px;color:#919191}
 a{color:#2563EB}
 </style>
 </head>
 <body>
 <nav style="margin-bottom:32px">
-<a href="${base}" style="font-weight:800;font-size:20px;color:#2563EB">YouthHire</a>
+<a href="${BASE}" style="font-weight:800;font-size:20px;color:#2563EB">YouthHire</a>
 <span style="color:#919191;margin:0 8px">›</span>
-<a href="${base}">All Jobs</a>
+<a href="${BASE}">All Jobs</a>
 <span style="color:#919191;margin:0 8px">›</span>
 <span>${esc(job.title)}</span>
 </nav>
+
+${isExpired ? '<div class="expired-banner">⚠️ This job posting has expired. Browse current openings on <a href="' + BASE + '">YouthHire</a>.</div>' : ''}
 
 <h1>${esc(job.title)}</h1>
 <div class="company">${esc(job.company)}</div>
@@ -173,18 +227,20 @@ ${job.benefits ? '<h3 style="margin:16px 0 8px;font-size:16px">Benefits</h3><ul>
 
 ${job.apply_method === 'url' && safeApplyUrl ? '<p style="margin:16px 0"><strong>Apply:</strong> <a href="' + safeApplyUrl + '" style="color:#2563EB;font-weight:700">' + safeApplyUrl + '</a></p>' : ''}
 ${job.apply_method === 'email' && job.apply_email ? '<p style="margin:16px 0"><strong>Apply:</strong> <a href="mailto:' + esc(job.apply_email) + '" style="color:#2563EB;font-weight:700">' + esc(job.apply_email) + '</a></p>' : ''}
-<a href="${base}/#detail-${id}" class="cta">View Full Posting & Apply →</a>
+${!isExpired ? '<a href="' + BASE + '/#detail-' + id + '" class="cta">View Full Posting & Apply →</a>' : '<a href="' + BASE + '" class="cta">Browse Current Jobs →</a>'}
 
 <div class="footer">
 <p><strong>YouthHire</strong> — Canada's youth job board. Connecting students, new grads, and young workers with employers hiring for entry-level, part-time, and first-job opportunities.</p>
-<p><a href="${base}/about">About</a> · <a href="${base}/contact">Contact</a> · <a href="${base}/privacy">Privacy</a> · <a href="${base}/terms">Terms</a></p>
+<p><a href="${BASE}/about">About</a> · <a href="${BASE}/contact">Contact</a> · <a href="${BASE}/privacy">Privacy</a> · <a href="${BASE}/terms">Terms</a></p>
 </div>
 
 </body>
 </html>`;
 
+  // no-store: response varies by User-Agent (bot→HTML, human→302).
+  // Sharing a cached response across UAs breaks bot detection, so we never cache at CDN.
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
-  res.setHeader('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=600');
+  res.setHeader('Cache-Control', 'no-store');
   return res.status(200).send(html);
 }
 
@@ -201,7 +257,7 @@ function isUnsafeUri(uri) {
 
 /**
  * Convert any date string to ISO 8601 YYYY-MM-DD.
- * Handles: "2026-05-03", "2026-05-03T...", "May 3, 2026", etc.
+ * Handles: "2026-05-03", "2026-05-03T...", "May 3, 2026", "Jul 2, 2026" etc.
  */
 function toISO(s) {
   if (!s) return '';
@@ -245,10 +301,12 @@ function parseSalary(wage) {
 
 function mapType(t) {
   if (!t) return 'FULL_TIME';
-  var l = t.toLowerCase();
-  if (l.indexOf('part') >= 0) return 'PART_TIME';
-  if (l.indexOf('contract') >= 0) return 'CONTRACTOR';
-  if (l.indexOf('temp') >= 0) return 'TEMPORARY';
-  if (l.indexOf('intern') >= 0) return 'INTERN';
+  const l = t.toLowerCase();
+  if (l.includes('part')) return 'PART_TIME';
+  if (l.includes('contract')) return 'CONTRACTOR';
+  if (l.includes('temp')) return 'TEMPORARY';
+  if (l.includes('intern')) return 'INTERN';
+  if (l.includes('seasonal') || l.includes('season')) return 'SEASONAL';
+  if (l.includes('casual')) return 'PART_TIME';
   return 'FULL_TIME';
 }

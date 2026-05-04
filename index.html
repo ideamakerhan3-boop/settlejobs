@@ -37,12 +37,16 @@
 {
   "@context": "https://schema.org",
   "@type": "WebSite",
+  "@id": "https://www.canadayouthhire.ca/#website",
   "name": "YouthHire",
   "url": "https://www.canadayouthhire.ca",
   "description": "Canada's youth job board. Connecting students, new grads, and young workers with employers hiring for entry-level, part-time, and first-job opportunities.",
   "potentialAction": {
     "@type": "SearchAction",
-    "target": "https://www.canadayouthhire.ca/?q={search_term_string}",
+    "target": {
+      "@type": "EntryPoint",
+      "urlTemplate": "https://www.canadayouthhire.ca/?q={search_term_string}"
+    },
     "query-input": "required name=search_term_string"
   }
 }
@@ -51,14 +55,17 @@
 {
   "@context": "https://schema.org",
   "@type": "Organization",
+  "@id": "https://www.canadayouthhire.ca/#organization",
   "name": "YouthHire",
   "url": "https://www.canadayouthhire.ca",
-  "description": "Youth employment platform connecting students, new grads, and young workers with Canadian employers hiring for entry-level and part-time roles.",
+  "logo": "https://www.canadayouthhire.ca/favicon.svg",
+  "description": "Canada's youth job board connecting students, new grads, and young workers with employers hiring for entry-level and part-time roles.",
   "areaServed": {
     "@type": "Country",
     "name": "Canada"
   },
-  "serviceType": "Employment Agency"
+  "serviceType": "Employment Agency",
+  "knowsAbout": ["Youth Employment", "Student Jobs", "Entry-Level Jobs", "Part-Time Work", "First Job"]
 }
 </script>
 <script type="application/ld+json">
@@ -1175,19 +1182,28 @@ function _updateJobSEO(job) {
   function _toISO(s){ if(!s) return ''; var str=String(s).trim(); if(/^\d{4}-\d{2}-\d{2}/.test(str)) return str.substring(0,10); var d=new Date(str); return isNaN(d.getTime())?'':d.toISOString().split('T')[0]; }
   // descToHTML: plain text → HTML paragraphs
   function _descToHTML(t){ if(!t) return ''; return t.split(/\n{2,}/).map(function(p){return '<p>'+p.replace(/\n/g,'<br>')+'</p>';}).join(''); }
+  var _orgId = 'https://www.canadayouthhire.ca/#organization';
+  var _mapType = function(t){ if(!t) return 'FULL_TIME'; var l=t.toLowerCase(); if(l.indexOf('part')>=0) return 'PART_TIME'; if(l.indexOf('contract')>=0) return 'CONTRACTOR'; if(l.indexOf('temp')>=0) return 'TEMPORARY'; if(l.indexOf('intern')>=0) return 'INTERN'; if(l.indexOf('season')>=0) return 'SEASONAL'; return 'FULL_TIME'; };
+  var _specials = ['Youth Friendly'];
+  if(!job.exp_req||job.exp_req==='No experience') _specials.push('No experience required');
+  if(job.type && /part.time|student|casual/i.test(job.type)) _specials.push('Students Welcome');
   var _jld = {
     "@context":"https://schema.org", "@type":"JobPosting",
     "title": job.title,
     "description": _descToHTML(job.description||job.desc||job.title),
     "datePosted": _toISO(job.posted_date||job.postedAt||job.created_at||''),
-    "employmentType": job.type||'FULL_TIME',
+    "validThrough": job.exp_date ? _toISO(job.exp_date) : undefined,
+    "employmentType": _mapType(job.type),
+    "specialCommitments": _specials.join(', '),
     "identifier": {"@type":"PropertyValue","name":"YouthHire","value":String(job.job_id||job.id||'')},
-    "hiringOrganization": {"@type":"Organization","name":job.company,"sameAs":"https://www.canadayouthhire.ca"},
+    "hiringOrganization": {"@type":"Organization","@id":_orgId,"name":job.company,"sameAs":"https://www.canadayouthhire.ca"},
     "jobLocation": {"@type":"Place","address":{"@type":"PostalAddress","addressLocality":job.loc||'',"addressRegion":job.prov||'',"addressCountry":"CA"}},
     "directApply": false
   };
-  if(job.exp_date) _jld.validThrough = _toISO(job.exp_date);
   if(job.remote==='remote'||job.remote==='Remote'){ _jld.jobLocationType='TELECOMMUTE'; _jld.applicantLocationRequirements={"@type":"Country","name":"Canada"}; }
+  else { _jld.jobLocationType='ONSITE'; }
+  if(job.apply_email && job.apply_method==='email'){ _jld.applicationContact={"@type":"ContactPoint","email":job.apply_email,"contactType":"application"}; }
+  if(job.benefits){ _jld.jobBenefits = job.benefits.replace(/\n/g,', ').substring(0,200); }
   sc.textContent = JSON.stringify(_jld);
   document.head.appendChild(sc);
 }
