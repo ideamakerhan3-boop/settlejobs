@@ -104,24 +104,30 @@ export default async function handler(req, res) {
   }
 
   // Remote / onsite
+  // Google for Jobs: jobLocationType only accepts 'TELECOMMUTE'.
+  // For onsite roles, omit the field entirely (do NOT use 'ONSITE' — invalid enum).
   if (job.remote === 'remote' || job.remote === 'Remote') {
     jsonLdObj.jobLocationType = 'TELECOMMUTE';
     jsonLdObj.applicantLocationRequirements = { "@type": "Country", "name": "Canada" };
-  } else {
-    jsonLdObj.jobLocationType = 'ONSITE';
   }
 
-  // Education
-  if (job.edu && job.edu !== 'None') {
+  // Education — credentialCategory must be a valid Google enum
+  // (high school | associate degree | bachelor degree | postgraduate degree | professional certificate)
+  const eduEnum = mapEduToCredential(job.edu);
+  if (eduEnum) {
     jsonLdObj.educationRequirements = {
       "@type": "EducationalOccupationalCredential",
-      "credentialCategory": job.edu
+      "credentialCategory": eduEnum
     };
   }
 
-  // Experience
-  if (job.exp_req && job.exp_req !== 'No experience') {
-    jsonLdObj.experienceRequirements = job.exp_req;
+  // Experience — must be OccupationalExperienceRequirements with monthsOfExperience
+  const expMonths = mapExpToMonths(job.exp_req);
+  if (expMonths !== null) {
+    jsonLdObj.experienceRequirements = {
+      "@type": "OccupationalExperienceRequirements",
+      "monthsOfExperience": expMonths
+    };
   }
 
   // Benefits (first 200 chars from DB benefits field)
@@ -309,4 +315,38 @@ function mapType(t) {
   if (l.includes('seasonal') || l.includes('season')) return 'SEASONAL';
   if (l.includes('casual')) return 'PART_TIME';
   return 'FULL_TIME';
+}
+
+/**
+ * Map admin-form education values to Google for Jobs `credentialCategory` enum.
+ * Valid enum: "high school" | "associate degree" | "bachelor degree"
+ *           | "postgraduate degree" | "professional certificate"
+ * Returns null when no education requirement should be emitted.
+ */
+function mapEduToCredential(edu) {
+  if (!edu || edu === 'None') return null;
+  const l = String(edu).toLowerCase();
+  if (l.includes('high school') || l.includes('ged')) return 'high school';
+  if (l.includes('college') || l.includes('associate') || l.includes('diploma')) return 'associate degree';
+  if (l.includes('bachelor') || l.includes('university')) return 'bachelor degree';
+  if (l.includes('master') || l.includes('phd') || l.includes('doctor') || l.includes('postgrad')) return 'postgraduate degree';
+  if (l.includes('certificate') || l.includes('cert')) return 'professional certificate';
+  return null;
+}
+
+/**
+ * Map admin-form experience strings to `monthsOfExperience` for
+ * OccupationalExperienceRequirements. Returns null when no requirement.
+ */
+function mapExpToMonths(exp) {
+  if (!exp || exp === 'No experience') return null;
+  const l = String(exp).toLowerCase();
+  if (l.includes('less than 1') || l.includes('<1')) return 6;
+  if (/\b1[\s\-–]*2\b/.test(l)) return 12;
+  if (/\b3[\s\-–]*5\b/.test(l)) return 36;
+  if (/\b5\+/.test(l) || /\b5 or more\b/.test(l)) return 60;
+  // Fallback: extract leading number, treat as years
+  const m = l.match(/(\d+)/);
+  if (m) return Number(m[1]) * 12;
+  return null;
 }
