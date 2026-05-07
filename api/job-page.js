@@ -12,14 +12,27 @@ const BASE = 'https://www.canadayouthhire.ca';
 const ORG_ID = `${BASE}/#organization`;
 
 /**
- * GET /jobs/:id  (via vercel.json rewrite → /api/job-page?id=:id)
- * Serves a pre-rendered HTML page for crawlers with full job details.
- * Real users (non-bot UA) are redirected to the SPA immediately, server-side.
+ * Multi-mode SEO renderer (single endpoint to stay under Vercel Hobby 12-function cap).
+ *
+ *   GET /jobs/:id          → renderJobDetail (bots get HTML, humans 302→SPA)
+ *   GET /locations/:slug   → renderListingPage('location') for both bots and humans
+ *   GET /employers/:slug   → renderListingPage('employer') for both bots and humans
+ *
+ * Listing pages target long-tail SEO ("jobs in vancouver bc", "jobs at city of X")
+ * and are real public pages, so we do NOT bot-redirect them.
  */
 const BOT_RE = /bot|crawl|spider|slurp|Googlebot|Bingbot|DuckDuck|Yandex|Baidu|facebookexternalhit|Twitterbot|LinkedInBot/i;
 
 export default async function handler(req, res) {
-  const id = req.query.id;
+  const { id, type, slug } = req.query;
+
+  if (type === 'location' && slug) {
+    return renderListingPage('location', String(slug), req, res);
+  }
+  if (type === 'employer' && slug) {
+    return renderListingPage('employer', String(slug), req, res);
+  }
+
   if (!id) return res.redirect(301, BASE + '/');
 
   // Server-side bot detection — real users go to the SPA immediately.
@@ -236,6 +249,8 @@ ${job.apply_method === 'email' && job.apply_email ? '<p style="margin:16px 0"><s
 ${!isExpired ? '<a href="' + BASE + '/#detail-' + id + '" class="cta">View Full Posting & Apply →</a>' : '<a href="' + BASE + '" class="cta">Browse Current Jobs →</a>'}
 
 <div class="footer">
+<p style="margin-bottom:12px"><strong>More opportunities</strong></p>
+<p style="margin-bottom:12px">${job.loc ? '<a href="' + BASE + '/locations/' + slugify(job.loc + (job.prov ? '-' + job.prov : '')) + '">More jobs in ' + esc(job.loc) + (job.prov ? ', ' + esc(job.prov) : '') + '</a>' : ''}${job.loc && job.company ? ' · ' : ''}${job.company ? '<a href="' + BASE + '/employers/' + slugify(job.company) + '">More jobs at ' + esc(job.company) + '</a>' : ''}</p>
 <p><strong>YouthHire</strong> — Canada's youth job board. Connecting students, new grads, and young workers with employers hiring for entry-level, part-time, and first-job opportunities.</p>
 <p><a href="${BASE}/about">About</a> · <a href="${BASE}/contact">Contact</a> · <a href="${BASE}/privacy">Privacy</a> · <a href="${BASE}/terms">Terms</a></p>
 </div>
@@ -349,4 +364,195 @@ function mapExpToMonths(exp) {
   const m = l.match(/(\d+)/);
   if (m) return Number(m[1]) * 12;
   return null;
+}
+
+/**
+ * Slugify a string into a URL-safe segment.
+ * "Vancouver, BC" → "vancouver-bc"
+ * "City of Vancouver" → "city-of-vancouver"
+ */
+function slugify(s) {
+  if (!s) return '';
+  return String(s).toLowerCase()
+    .normalize('NFKD').replace(/[̀-ͯ]/g, '')  // strip accents
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .substring(0, 80);
+}
+
+/**
+ * Render a long-tail SEO landing page that lists active jobs filtered by
+ * location ("vancouver-bc") or employer ("city-of-vancouver").
+ *
+ * Single-query strategy: fetch all active jobs (capped at 1000) and group
+ * by slugified key client-side. This is cheap at our scale (<500 jobs) and
+ * lets the same query feed sitemap.js without schema changes.
+ *
+ * Renders the same HTML for bots and humans (no UA branching) — these are
+ * real public pages, not bot-only crawl targets.
+ */
+async function renderListingPage(type, slug, req, res) {
+  const cleanSlug = slugify(slug);  // defend against junk input
+  if (!cleanSlug) return res.redirect(302, BASE + '/');
+
+  const LIST_COLS = 'job_id, title, company, loc, prov, type, wage, category, remote, posted_date, created_at, exp_date, status';
+  const { data: jobs } = await sb.from('jobs')
+    .select(LIST_COLS)
+    .eq('status', 'active')
+    .order('created_at', { ascending: false })
+    .limit(1000);
+
+  if (!jobs || jobs.length === 0) {
+    return renderEmptyListing(type, cleanSlug, res);
+  }
+
+  // Filter to jobs whose slug matches the requested one
+  const matched = jobs.filter(j => {
+    if (type === 'location') {
+      return slugify((j.loc || '') + (j.prov ? '-' + j.prov : '')) === cleanSlug;
+    } else {
+      return slugify(j.company || '') === cleanSlug;
+    }
+  });
+
+  if (matched.length === 0) {
+    return renderEmptyListing(type, cleanSlug, res);
+  }
+
+  // Derive display name from the first matched row (DB is source of truth)
+  const sample = matched[0];
+  const displayName = type === 'location'
+    ? (sample.loc || '') + (sample.prov ? ', ' + sample.prov : '')
+    : (sample.company || cleanSlug);
+
+  const url = BASE + (type === 'location' ? '/locations/' : '/employers/') + cleanSlug;
+  const pageTitle = type === 'location'
+    ? `Jobs in ${displayName} — YouthHire`
+    : `Jobs at ${displayName} — YouthHire`;
+  const pageDesc = `${matched.length} active youth ${matched.length === 1 ? 'job' : 'jobs'} ${type === 'location' ? 'in' : 'at'} ${displayName}. Entry-level, part-time, and first-job opportunities for students, new grads, and young workers in Canada.`;
+
+  // ItemList JSON-LD aggregating the JobPosting links
+  const itemListLd = JSON.stringify({
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    "itemListElement": matched.slice(0, 50).map((j, i) => ({
+      "@type": "ListItem",
+      "position": i + 1,
+      "url": BASE + '/jobs/' + j.job_id
+    }))
+  }).replace(/<\//g, '<\\/');
+
+  const breadcrumbLd = JSON.stringify({
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      { "@type": "ListItem", "position": 1, "name": "Home", "item": BASE },
+      { "@type": "ListItem", "position": 2, "name": type === 'location' ? "Locations" : "Employers", "item": BASE + (type === 'location' ? '/locations' : '/employers') },
+      { "@type": "ListItem", "position": 3, "name": displayName, "item": url }
+    ]
+  }).replace(/<\//g, '<\\/');
+
+  const cardsHtml = matched.slice(0, 50).map(j => {
+    const otherSlug = type === 'location' ? slugify(j.company || '') : slugify((j.loc || '') + (j.prov ? '-' + j.prov : ''));
+    const otherLink = type === 'location'
+      ? (j.company ? '<a href="' + BASE + '/employers/' + otherSlug + '">' + esc(j.company) + '</a>' : '')
+      : (j.loc ? '<a href="' + BASE + '/locations/' + otherSlug + '">' + esc(j.loc) + (j.prov ? ', ' + esc(j.prov) : '') + '</a>' : '');
+    return `<li class="card">
+  <a href="${BASE}/jobs/${j.job_id}" class="card-title">${esc(j.title)}</a>
+  <div class="card-meta">${otherLink}${j.type ? ' · ' + esc(j.type) : ''}${j.wage ? ' · ' + esc(j.wage) : ''}${j.remote && /remote/i.test(j.remote) ? ' · 🏠 Remote' : ''}</div>
+</li>`;
+  }).join('\n');
+
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${esc(pageTitle)}</title>
+<meta name="description" content="${esc(pageDesc)}">
+<link rel="canonical" href="${url}">
+<meta name="robots" content="index, follow">
+<meta property="og:type" content="website">
+<meta property="og:title" content="${esc(pageTitle)}">
+<meta property="og:description" content="${esc(pageDesc)}">
+<meta property="og:url" content="${url}">
+<meta property="og:site_name" content="YouthHire">
+<meta property="og:locale" content="en_CA">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="${esc(pageTitle)}">
+<meta name="twitter:description" content="${esc(pageDesc)}">
+<script type="application/ld+json">${itemListLd}</script>
+<script type="application/ld+json">${breadcrumbLd}</script>
+<style>
+body{font-family:system-ui,sans-serif;max-width:900px;margin:40px auto;padding:0 20px;color:#0F0F0F;line-height:1.6}
+h1{color:#2563EB;font-size:28px;margin-bottom:4px}
+.lede{color:#5A5A5A;margin-bottom:32px}
+ul.cards{list-style:none;padding:0;margin:0}
+.card{padding:16px;border:1px solid #E2E2DC;border-radius:10px;margin-bottom:12px;transition:border-color .15s}
+.card:hover{border-color:#2563EB}
+.card-title{font-weight:700;font-size:17px;color:#2563EB;text-decoration:none}
+.card-title:hover{text-decoration:underline}
+.card-meta{font-size:13px;color:#5A5A5A;margin-top:4px}
+.card-meta a{color:#5A5A5A;text-decoration:underline}
+nav{margin-bottom:32px;font-size:14px}
+.cta{display:inline-block;background:#2563EB;color:#fff;padding:14px 28px;border-radius:10px;text-decoration:none;font-weight:700;margin:24px 0}
+.footer{margin-top:48px;padding-top:20px;border-top:1px solid #E2E2DC;font-size:13px;color:#919191}
+a{color:#2563EB}
+</style>
+</head>
+<body>
+<nav>
+<a href="${BASE}" style="font-weight:800;font-size:20px;color:#2563EB">YouthHire</a>
+<span style="color:#919191;margin:0 8px">›</span>
+<span>${type === 'location' ? 'Jobs in' : 'Jobs at'} ${esc(displayName)}</span>
+</nav>
+
+<h1>${type === 'location' ? 'Jobs in' : 'Jobs at'} ${esc(displayName)}</h1>
+<p class="lede">${matched.length} active ${matched.length === 1 ? 'opening' : 'openings'} for students, new grads, and young workers.</p>
+
+<ul class="cards">
+${cardsHtml}
+</ul>
+
+${matched.length > 50 ? '<p style="color:#5A5A5A;font-size:14px;margin-top:24px">Showing the 50 most recent. <a href="' + BASE + '">Browse all jobs →</a></p>' : ''}
+
+<a href="${BASE}" class="cta">Browse all jobs →</a>
+
+<div class="footer">
+<p><strong>YouthHire</strong> — Canada's youth job board. Connecting students, new grads, and young workers with employers hiring for entry-level, part-time, and first-job opportunities.</p>
+<p><a href="${BASE}/about">About</a> · <a href="${BASE}/contact">Contact</a> · <a href="${BASE}/privacy">Privacy</a> · <a href="${BASE}/terms">Terms</a></p>
+</div>
+
+</body>
+</html>`;
+
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
+  // Edge-cache for 5 minutes; revalidate in background. Safe because content
+  // is identical for bots and humans (no UA-variant response).
+  res.setHeader('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=60');
+  return res.status(200).send(html);
+}
+
+/**
+ * Empty listing → 404 with noindex (don't pollute the index with empty pages
+ * that may briefly exist after a job is removed).
+ */
+function renderEmptyListing(type, slug, res) {
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Not Found — YouthHire</title>
+<meta name="robots" content="noindex, follow">
+<style>body{font-family:system-ui,sans-serif;max-width:600px;margin:80px auto;padding:0 20px;text-align:center;color:#0F0F0F}a{color:#2563EB}</style>
+</head>
+<body>
+<h1>No active jobs found</h1>
+<p>There are no active openings ${type === 'location' ? 'in this location' : 'at this employer'} right now.</p>
+<p><a href="${BASE}">← Browse all current jobs</a></p>
+</body>
+</html>`;
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
+  res.setHeader('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=30');
+  return res.status(404).send(html);
 }
