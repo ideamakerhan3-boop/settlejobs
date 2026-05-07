@@ -18,7 +18,9 @@
     { "source": "/forgot", "destination": "/index.html" },
     { "source": "/reset", "destination": "/index.html" },
     { "source": "/home", "destination": "/index.html" },
-    { "source": "/jobs/:id", "destination": "/api/job-page?id=:id" }
+    { "source": "/jobs/:id", "destination": "/api/job-page?id=:id" },
+    { "source": "/locations/:slug", "destination": "/api/job-page?type=location&slug=:slug" },
+    { "source": "/employers/:slug", "destination": "/api/job-page?type=employer&slug=:slug" }
   ],
   "headers": [
     {

@@ -5,6 +5,18 @@ const sb = createClient(
   process.env.SUPABASE_SERVICE_KEY
 );
 
+/**
+ * Slugify mirroring api/job-page.js — keep these in sync.
+ */
+function slugify(s) {
+  if (!s) return '';
+  return String(s).toLowerCase()
+    .normalize('NFKD').replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .substring(0, 80);
+}
+
 export default async function handler(req, res) {
   res.setHeader('Content-Type', 'application/xml');
   res.setHeader('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=600');
@@ -19,29 +31,66 @@ export default async function handler(req, res) {
     { loc: '/', changefreq: 'daily', priority: '1.0' },
   ];
 
-  // Active jobs from DB
-  let jobEntries = [];
+  // Active jobs from DB — single fetch reused for /jobs/, /locations/, /employers/
+  let jobs = [];
   try {
-    const { data: jobs, error } = await sb.from('jobs').select('job_id, title, company, loc, created_at')
-      .eq('status', 'active').order('created_at', { ascending: false }).limit(500);
+    const { data, error } = await sb.from('jobs')
+      .select('job_id, title, company, loc, prov, created_at')
+      .eq('status', 'active').order('created_at', { ascending: false }).limit(1000);
     if (error) console.error('sitemap DB error:', error.message);
+    if (data) jobs = data;
+  } catch (e) {
+    console.error('sitemap job fetch error:', e.message);
+  }
 
-    if (jobs) {
-      jobEntries = jobs.map(function(j) {
-        const slug = (j.title + '-' + j.company).toLowerCase()
-          .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').substring(0, 80);
-        const lastmod = j.created_at ? j.created_at.split('T')[0] : new Date().toISOString().split('T')[0];
-        return `  <url>
+  // Per-job URLs
+  const jobEntries = jobs.map(function(j) {
+    const lastmod = j.created_at ? j.created_at.split('T')[0] : new Date().toISOString().split('T')[0];
+    return `  <url>
     <loc>${base}/jobs/${j.job_id}</loc>
     <lastmod>${lastmod}</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>`;
-      });
-    }
-  } catch (e) {
-    console.error('sitemap job fetch error:', e.message);
+  });
+
+  // Location landing URLs (distinct slug from loc + prov)
+  const locMap = new Map();
+  for (const j of jobs) {
+    if (!j.loc) continue;
+    const slug = slugify(j.loc + (j.prov ? '-' + j.prov : ''));
+    if (!slug) continue;
+    const prev = locMap.get(slug);
+    const lastmod = j.created_at ? j.created_at.split('T')[0] : null;
+    if (!prev || (lastmod && lastmod > prev)) locMap.set(slug, lastmod);
   }
+  const locEntries = Array.from(locMap.entries()).map(function(entry) {
+    const [slug, lastmod] = entry;
+    return `  <url>
+    <loc>${base}/locations/${slug}</loc>${lastmod ? '\n    <lastmod>' + lastmod + '</lastmod>' : ''}
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>`;
+  });
+
+  // Employer landing URLs (distinct slug from company name)
+  const empMap = new Map();
+  for (const j of jobs) {
+    if (!j.company) continue;
+    const slug = slugify(j.company);
+    if (!slug) continue;
+    const prev = empMap.get(slug);
+    const lastmod = j.created_at ? j.created_at.split('T')[0] : null;
+    if (!prev || (lastmod && lastmod > prev)) empMap.set(slug, lastmod);
+  }
+  const empEntries = Array.from(empMap.entries()).map(function(entry) {
+    const [slug, lastmod] = entry;
+    return `  <url>
+    <loc>${base}/employers/${slug}</loc>${lastmod ? '\n    <lastmod>' + lastmod + '</lastmod>' : ''}
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>`;
+  });
 
   const staticXml = staticPages.map(function(p) {
     return `  <url>
@@ -55,6 +104,8 @@ export default async function handler(req, res) {
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 ${staticXml}
 ${jobEntries.join('\n')}
+${locEntries.join('\n')}
+${empEntries.join('\n')}
 </urlset>`;
 
   return res.status(200).send(xml);
