@@ -1868,6 +1868,10 @@ function doRegister() {
   var pw2 = document.getElementById('r-pw2').value||'';
   var co = (document.getElementById('r-company').value||'').trim();
   var terms = document.getElementById('r-terms').checked;
+  // CASL marketing opt-in — explicit, unchecked by default. Checkbox added
+  // alongside r-terms; if not present in DOM (older page state), defaults to false.
+  var marketingEl = document.getElementById('r-marketing-optin');
+  var marketing_opt_in = marketingEl ? !!marketingEl.checked : false;
 
   if(!name){ err('r-name','Please enter your full name.'); return; }
   if(!em||em.indexOf('@')<1){ err('r-email','Please enter a valid email address.'); return; }
@@ -1886,7 +1890,7 @@ function doRegister() {
   var td=new Date(); var ds=mn[td.getMonth()]+' '+td.getDate()+', '+td.getFullYear();
 
   hashPw(pw).then(function(pwHash){
-    _apiCall('/api/auth-api', {action:'register', email:em, pw_hash:pwHash, name:name, company:co}).then(function(reg){
+    _apiCall('/api/auth-api', {action:'register', email:em, pw_hash:pwHash, name:name, company:co, marketing_opt_in:marketing_opt_in}).then(function(reg){
       if(!reg || reg.error){
         resetBtn();
         var msg = (reg && reg.error) || '';
@@ -4464,6 +4468,25 @@ function _initApp() {
     var _openJobId = _params.get('openJob');
     var _jobMatch = _path.match(/^\/jobs\/(.+)$/);
     var _jid = _openJobId || (_jobMatch ? _jobMatch[1] : null);
+
+    // /unsubscribe?t=<token> — CASL-required one-click unsubscribe.
+    // Calls auth-api unsubscribe action (token-based, no auth needed) and
+    // shows a confirmation toast. Always succeeds (non-leaking) regardless
+    // of token validity.
+    if(_path === '/unsubscribe' || _path.indexOf('/unsubscribe') === 0) {
+      var _unsubToken = _params.get('t') || '';
+      if(_unsubToken && /^[a-f0-9]{32}$/.test(_unsubToken)) {
+        _apiCall('/api/auth-api', {action:'unsubscribe', token:_unsubToken})
+          .then(function(){ showToast('✅ You have been unsubscribed from marketing emails. You will still receive transactional emails (account-related, password reset).', 'success', 8000); })
+          .catch(function(){ showToast('Unsubscribe processed.', 'success'); });
+      } else {
+        showToast('Invalid unsubscribe link. If you keep receiving emails, contact support.', 'warn', 8000);
+      }
+      window.history.replaceState({}, '', '/');
+      go('home');
+      return;
+    }
+
     if(_jid) {
       // openJob 파라미터 제거
       if(_openJobId) window.history.replaceState({}, '', '/');
@@ -4745,6 +4768,8 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
     <input type="hidden" id="r-industry" value="Other">
 
     <label class="legal-check" style="margin-top:12px"><input type="checkbox" id="r-terms"><span>I agree to the <a onclick="go('terms')">Terms of Service</a> and <a onclick="go('privacy')">Privacy Policy</a>. Data stored in Canada.</span></label>
+
+    <label class="legal-check" style="margin-top:8px"><input type="checkbox" id="r-marketing-optin"><span>Send me occasional emails about new features, promotions, and tips for hiring young talent. (Optional — unsubscribe anytime.)</span></label>
 
     <div style="background:var(--greenl);border:1px solid #B8DCC7;border-radius:var(--r);padding:12px 14px;font-size:12.5px;color:var(--greend);line-height:1.6;margin:16px 0">🍁 By creating your account, you confirm compliance with the <strong>Canadian Human Rights Act</strong> and applicable employment standards legislation.</div>
     <button class="btn btn-primary btn-full btn-lg" onclick="doRegister()">Create Account &amp; Post Jobs →</button>

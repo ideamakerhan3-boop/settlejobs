@@ -1,5 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { purgeExpiredRateLimits } from './_lib/ratelimit.js';
+import { sendMarketingEmail } from './_lib/email.js';
+import { BRAND, EMAIL_TEMPLATES } from './_lib/marketing-config.js';
 
 const sb = createClient(
   process.env.SUPABASE_URL,
@@ -141,11 +143,91 @@ export default async function handler(req, res) {
       }
     }
 
-    console.log(`Cron: expired ${toExpire.length}, notified ${notified}/${activeJobs.length} jobs`);
+    // ───────────────────────────────────────────────────────────────────
+    // Job-alert digest — match active jobs to opted-in subscribers and send.
+    // Runs in the same daily cron so we never need a second function slot.
+    // Cron is 06:00 UTC = ~midnight in BC, 02:00 in ON; subscribers receive
+    // a fresh digest before their morning. CASL-gated via sendMarketingEmail.
+    // ───────────────────────────────────────────────────────────────────
+    let alertsSent = 0;
+    let alertsSkipped = 0;
+    try {
+      const { data: subscribers } = await sb.from('accounts')
+        .select('email, name, marketing_opt_in, unsub_token, alert_prefs, last_alert_sent_at')
+        .eq('marketing_opt_in', true)
+        .neq('alert_prefs', '{}');
+
+      if (subscribers && subscribers.length > 0) {
+        for (const sub of subscribers) {
+          const prefs = sub.alert_prefs || {};
+          const freq = prefs.frequency === 'weekly' ? 'weekly' : 'daily';
+          // Throttle per-account: daily = 22h min gap, weekly = 6.5d min gap
+          const minGapMs = freq === 'weekly' ? 6.5 * 86400000 : 22 * 3600000;
+          if (sub.last_alert_sent_at) {
+            const ageMs = now.getTime() - new Date(sub.last_alert_sent_at).getTime();
+            if (ageMs < minGapMs) { alertsSkipped++; continue; }
+          }
+
+          // Find matching active jobs created in the relevant window
+          const windowMs = freq === 'weekly' ? 7 * 86400000 : 86400000 * 1.5; // a bit of slack
+          const sinceISO = new Date(now.getTime() - windowMs).toISOString();
+          let q = sb.from('jobs')
+            .select('job_id, title, company, loc, prov, type, wage, category, remote, created_at')
+            .eq('status', 'active')
+            .gte('created_at', sinceISO)
+            .order('created_at', { ascending: false })
+            .limit(20);
+          if (prefs.prov)     q = q.eq('prov', prefs.prov);
+          if (prefs.category) q = q.eq('category', prefs.category);
+          if (prefs.loc)      q = q.ilike('loc', `%${prefs.loc}%`);
+
+          const { data: matches } = await q;
+          if (!matches || matches.length === 0) { alertsSkipped++; continue; }
+
+          // Build digest body — plaintext list of matched jobs with links.
+          const lines = matches.slice(0, 10).map(j => {
+            const where = j.loc ? `${j.loc}${j.prov ? ', ' + j.prov : ''}` : (j.prov || 'Canada');
+            const wage = j.wage ? ` · ${j.wage}` : '';
+            const remote = j.remote && /remote/i.test(j.remote) ? ' · 🏠 Remote' : '';
+            return `• ${j.title} at ${j.company || 'Employer'} (${where}${wage}${remote})\n  ${BRAND.baseUrl}/jobs/${j.job_id}`;
+          });
+          const filterDesc = [
+            prefs.prov && `province=${prefs.prov}`,
+            prefs.category && `category=${prefs.category}`,
+            prefs.loc && `near=${prefs.loc}`,
+            prefs.remote_ok && 'remote OK'
+          ].filter(Boolean).join(', ') || 'all openings';
+
+          const result = await sendMarketingEmail({
+            sb, account: sub,
+            template_id: EMAIL_TEMPLATES.jobAlert,
+            template_params: {
+              subject:     `${matches.length} new youth ${matches.length === 1 ? 'job' : 'jobs'} matching your alert`,
+              heading:     `New jobs for you on ${BRAND.name}`,
+              message:     `Here are the ${matches.length} newest ${freq === 'weekly' ? 'this week' : 'today'} matching your alert (${filterDesc}):\n\n${lines.join('\n\n')}\n\nUpdate your alert settings:\n${BRAND.baseUrl}/dashboard`,
+              button_text: 'Browse all jobs',
+            }
+          });
+
+          if (result.sent) {
+            await sb.from('accounts').update({ last_alert_sent_at: new Date().toISOString() }).eq('email', sub.email);
+            alertsSent++;
+          } else {
+            alertsSkipped++;
+          }
+        }
+      }
+    } catch (alertErr) {
+      console.error('job-alert sweep error (non-critical):', alertErr.message);
+    }
+
+    console.log(`Cron: expired ${toExpire.length}, notified ${notified}/${activeJobs.length} jobs, alerts sent ${alertsSent}, skipped ${alertsSkipped}`);
     return res.status(200).json({
-      message: `Expired ${toExpire.length} jobs, notified ${notified}`,
+      message: `Expired ${toExpire.length}, notified ${notified}, alerts ${alertsSent}/${alertsSent + alertsSkipped}`,
       expired: toExpire.length,
       notified,
+      alerts_sent: alertsSent,
+      alerts_skipped: alertsSkipped,
       total: activeJobs.length,
     });
 
