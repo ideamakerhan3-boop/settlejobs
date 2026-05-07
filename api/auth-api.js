@@ -1,8 +1,14 @@
 import { createClient } from '@supabase/supabase-js';
 import bcrypt from 'bcryptjs';
+import { randomBytes } from 'crypto';
 import { rateLimit } from './_lib/ratelimit.js';
 import { verifyTurnstile } from './_lib/turnstile.js';
 import { notifyIndexNow, notifyIndexNowJob } from './_lib/indexnow.js';
+
+// 32-char hex (128 bits) — used for unsub_token and password reset tokens.
+function cryptoRandomHex32() {
+  return randomBytes(16).toString('hex');
+}
 
 // Service key bypasses RLS — all sensitive account/job operations go through here.
 const sb = createClient(
@@ -86,7 +92,7 @@ export default async function handler(req, res) {
         const ok = await verifyTurnstile(body.turnstile_token, ip);
         if (!ok) return res.status(403).json({ error: 'Bot check failed. Please refresh and try again.' });
       }
-      const { email, pw_hash, name, company } = body;
+      const { email, pw_hash, name, company, marketing_opt_in } = body;
       if (!email || !pw_hash) return res.status(400).json({ error: 'email and pw_hash required' });
       if (!/^[a-f0-9]{64}$/.test(pw_hash)) return res.status(400).json({ error: 'invalid pw_hash format' });
       // Input length hard caps (defense against oversized payloads)
@@ -106,11 +112,18 @@ export default async function handler(req, res) {
         return res.status(409).json({ error: 'Account already exists with this email' });
       }
 
-      // Insert new account with bcrypt-hashed password (salt is embedded)
+      // Insert new account with bcrypt-hashed password (salt is embedded).
+      // CASL marketing opt-in is captured here from a checkbox on the signup form.
+      // The unsub_token defaults to a fresh UUID via Postgres so unsubscribe URLs
+      // work even if the user opts in later from settings.
       const hashedPw = await bcrypt.hash(pw_hash, BCRYPT_ROUNDS);
+      const optedIn = marketing_opt_in === true;  // strict boolean — checkbox values
       const { error: insErr } = await sb.from('accounts').insert({
         email: em, pw: hashedPw, name: name || '', company: company || '', is_admin: false, status: 'active',
-        created_at: new Date().toISOString()
+        created_at: new Date().toISOString(),
+        marketing_opt_in: optedIn,
+        marketing_opt_in_at: optedIn ? new Date().toISOString() : null,
+        unsub_token: cryptoRandomHex32(),
       });
       if (insErr) {
         console.error('register insert error:', insErr.message);
@@ -300,6 +313,29 @@ export default async function handler(req, res) {
       return res.status(200).json({ ok: true, email: acct.email });
     }
 
+    // ──────────────── UNSUBSCRIBE (token-based, no auth needed) ────────────────
+    // Unsub URL format: /unsubscribe?t=<unsub_token>
+    // Token is per-account, stable across sessions, generated at registration
+    // (or backfilled via migration). Flips marketing_opt_in to false and clears
+    // last_alert_sent_at so re-opt-in starts fresh. Always returns ok=true even
+    // for unknown tokens to avoid leaking which tokens are valid.
+    if (action === 'unsubscribe') {
+      const { token } = body;
+      if (!token || typeof token !== 'string' || !/^[a-f0-9]{32}$/.test(token)) {
+        // Don't 400 — return ok to avoid token-validity oracle
+        return res.status(200).json({ ok: true });
+      }
+      try {
+        await sb.from('accounts').update({
+          marketing_opt_in: false,
+          last_alert_sent_at: null,
+        }).eq('unsub_token', token);
+      } catch (e) {
+        console.error('unsubscribe error:', e.message);
+      }
+      return res.status(200).json({ ok: true });
+    }
+
     // ──────────────── All below require auth ────────────────
     const { email, pw_hash } = body;
     const acct = await verifyAuth(email, pw_hash);
@@ -422,6 +458,52 @@ export default async function handler(req, res) {
     if (action === 'get_own_credits') {
       const { data } = await sb.from('credits').select('total, used').eq('email', em).maybeSingle();
       return res.status(200).json({ total: data?.total || 0, used: data?.used || 0 });
+    }
+
+    // ──────────────── UPDATE_MARKETING_OPTIN (logged-in user toggles) ────────────────
+    // Used by settings page to flip marketing_opt_in. Records timestamp on opt-in
+    // (CASL: must record consent date). Opt-out clears last_alert_sent_at so the
+    // throttle resets if they later re-opt-in.
+    if (action === 'update_marketing_optin') {
+      const { opt_in } = body;
+      const want = opt_in === true;
+      const patch = {
+        marketing_opt_in: want,
+        marketing_opt_in_at: want ? new Date().toISOString() : null,
+      };
+      if (!want) patch.last_alert_sent_at = null;
+      const { error } = await sb.from('accounts').update(patch).eq('email', em);
+      if (error) return res.status(500).json({ error: 'Update failed' });
+      return res.status(200).json({ ok: true, marketing_opt_in: want });
+    }
+
+    // ──────────────── UPDATE_ALERT_PREFS (job alert subscription) ────────────────
+    // Body: { alert_prefs: { loc?, prov?, category?, remote_ok?, frequency? } }
+    // Empty {} disables alerts. Any subset valid. Frequency clamped to 'daily' or
+    // 'weekly' (no instant — too spammy). marketing_opt_in must be true to receive
+    // alerts; we don't auto-enable opt-in here so the user makes an explicit choice.
+    if (action === 'update_alert_prefs') {
+      const raw = body.alert_prefs || {};
+      const clean = {};
+      if (raw.loc      && typeof raw.loc      === 'string' && raw.loc.length      < 100) clean.loc      = raw.loc.substring(0, 100);
+      if (raw.prov     && typeof raw.prov     === 'string' && raw.prov.length     < 4)   clean.prov     = raw.prov.substring(0, 4);
+      if (raw.category && typeof raw.category === 'string' && raw.category.length < 60)  clean.category = raw.category.substring(0, 60);
+      if (raw.remote_ok === true) clean.remote_ok = true;
+      if (raw.frequency === 'weekly' || raw.frequency === 'daily') clean.frequency = raw.frequency;
+      else clean.frequency = 'daily';
+      const { error } = await sb.from('accounts').update({ alert_prefs: clean }).eq('email', em);
+      if (error) return res.status(500).json({ error: 'Update failed' });
+      return res.status(200).json({ ok: true, alert_prefs: clean });
+    }
+
+    if (action === 'get_alert_prefs') {
+      const { data } = await sb.from('accounts')
+        .select('marketing_opt_in, alert_prefs')
+        .eq('email', em).maybeSingle();
+      return res.status(200).json({
+        marketing_opt_in: !!data?.marketing_opt_in,
+        alert_prefs: data?.alert_prefs || {},
+      });
     }
 
     return res.status(400).json({ error: 'Unknown action: ' + action });

@@ -29,6 +29,16 @@ function normalizeLoc(loc, prov) {
 }
 
 export default async function handler(req, res) {
+  // Multi-format dispatch: ?format=rss or Accept: application/rss+xml → job feed
+  // for aggregators (Indeed, ZipRecruiter, Jooble, Adzuna). Default = sitemap.xml
+  // for search engines.
+  const format = String(req.query.format || '').toLowerCase();
+  const wantsRss = format === 'rss' || (req.headers.accept || '').includes('application/rss+xml');
+
+  if (wantsRss) {
+    return renderRssFeed(req, res);
+  }
+
   res.setHeader('Content-Type', 'application/xml');
   res.setHeader('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=600');
 
@@ -144,4 +154,85 @@ ${empEntries.join('\n')}
 </urlset>`;
 
   return res.status(200).send(xml);
+}
+
+/**
+ * RSS 2.0 job feed for aggregator pickup.
+ *
+ * Submission targets (manual one-time setup — no API for most):
+ *   - Indeed       (free posting program; provides feed URL on application)
+ *   - ZipRecruiter (free aggregator tier; uses RSS or XML)
+ *   - Jooble       (free aggregator; submit feed URL)
+ *   - Adzuna       (Canada coverage; XML/RSS)
+ *   - SimplyHired  (Indeed-owned, picks up from Indeed automatically)
+ *   - Glassdoor    (LinkedIn-owned, picks up from LinkedIn Jobs)
+ *
+ * Format = RSS 2.0 with required elements (title, link, description, pubDate)
+ * plus job-specific extensions when the aggregator supports them. Most Canadian
+ * aggregators accept basic RSS — richer formats (HR-XML, Indeed XML) can be
+ * added as a `?format=indeed` etc. variant later if needed.
+ *
+ * URL: /api/sitemap?format=rss  (or /feed.xml via vercel.json rewrite)
+ */
+async function renderRssFeed(req, res) {
+  const base = 'https://www.canadayouthhire.ca';
+  res.setHeader('Content-Type', 'application/rss+xml; charset=utf-8');
+  res.setHeader('Cache-Control', 'public, s-maxage=900, stale-while-revalidate=300');
+
+  let jobs = [];
+  try {
+    const { data } = await sb.from('jobs')
+      .select('job_id, title, company, loc, prov, type, wage, category, remote, description, posted_date, created_at, exp_date, apply_method, apply_email, apply_url')
+      .eq('status', 'active').order('created_at', { ascending: false }).limit(500);
+    if (data) jobs = data;
+  } catch (e) {
+    console.error('rss feed fetch error:', e.message);
+  }
+
+  function rssEsc(s) {
+    if (s == null) return '';
+    return String(s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&apos;');
+  }
+  function rfc822(d) {
+    try { return new Date(d).toUTCString(); } catch (e) { return new Date().toUTCString(); }
+  }
+
+  const items = jobs.map(function(j) {
+    const url = `${base}/jobs/${j.job_id}`;
+    const where = j.loc ? `${j.loc}${j.prov ? ', ' + j.prov : ''}` : (j.prov || 'Canada');
+    const remoteTag = j.remote && /remote/i.test(j.remote) ? ' [Remote]' : '';
+    const descParts = [
+      j.company ? `Employer: ${j.company}` : null,
+      `Location: ${where}${remoteTag}`,
+      j.type ? `Type: ${j.type}` : null,
+      j.wage ? `Compensation: ${j.wage}` : null,
+      j.category ? `Category: ${j.category}` : null,
+      '',
+      (j.description || '').substring(0, 800),
+    ].filter(function(p) { return p !== null; }).join('\n');
+    return `    <item>
+      <title>${rssEsc(j.title || 'Untitled')}${j.company ? ' - ' + rssEsc(j.company) : ''}</title>
+      <link>${url}</link>
+      <guid isPermaLink="true">${url}</guid>
+      <pubDate>${rfc822(j.created_at || j.posted_date || new Date())}</pubDate>
+      <category>${rssEsc(j.category || 'Uncategorized')}</category>
+      <description><![CDATA[${descParts}]]></description>
+    </item>`;
+  }).join('\n');
+
+  const rss = `<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>YouthHire — Canada's Youth Job Board</title>
+    <link>${base}</link>
+    <atom:link href="${base}/feed.xml" rel="self" type="application/rss+xml" />
+    <description>Entry-level, part-time, and first-job opportunities for students, new grads, and young workers across Canada.</description>
+    <language>en-CA</language>
+    <lastBuildDate>${new Date().toUTCString()}</lastBuildDate>
+${items}
+  </channel>
+</rss>`;
+  return res.status(200).send(rss);
 }
