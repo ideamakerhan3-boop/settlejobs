@@ -1200,8 +1200,9 @@ function _updateJobSEO(job) {
     "jobLocation": {"@type":"Place","address":{"@type":"PostalAddress","addressLocality":job.loc||'',"addressRegion":job.prov||'',"addressCountry":"CA"}},
     "directApply": false
   };
+  // Google for Jobs: jobLocationType only accepts 'TELECOMMUTE'.
+  // For onsite roles, omit the field entirely (do NOT use 'ONSITE' — invalid enum).
   if(job.remote==='remote'||job.remote==='Remote'){ _jld.jobLocationType='TELECOMMUTE'; _jld.applicantLocationRequirements={"@type":"Country","name":"Canada"}; }
-  else { _jld.jobLocationType='ONSITE'; }
   if(job.apply_email && job.apply_method==='email'){ _jld.applicationContact={"@type":"ContactPoint","email":job.apply_email,"contactType":"application"}; }
   if(job.benefits){ _jld.jobBenefits = job.benefits.replace(/\n/g,', ').substring(0,200); }
   sc.textContent = JSON.stringify(_jld);
