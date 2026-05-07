@@ -12,6 +12,49 @@ const BASE = 'https://www.canadayouthhire.ca';
 const ORG_ID = `${BASE}/#organization`;
 
 /**
+ * Whitelisted province landing pages — 13 Canadian provinces/territories.
+ * Slug = lowercased full name; value = { code, name } where code matches
+ * `jobs.prov` (2-letter) and name is the display label.
+ */
+const PROVINCE_SLUGS = {
+  'alberta':                    { code: 'AB', name: 'Alberta' },
+  'british-columbia':           { code: 'BC', name: 'British Columbia' },
+  'manitoba':                   { code: 'MB', name: 'Manitoba' },
+  'new-brunswick':              { code: 'NB', name: 'New Brunswick' },
+  'newfoundland-and-labrador':  { code: 'NL', name: 'Newfoundland and Labrador' },
+  'nova-scotia':                { code: 'NS', name: 'Nova Scotia' },
+  'northwest-territories':      { code: 'NT', name: 'Northwest Territories' },
+  'nunavut':                    { code: 'NU', name: 'Nunavut' },
+  'ontario':                    { code: 'ON', name: 'Ontario' },
+  'prince-edward-island':       { code: 'PE', name: 'Prince Edward Island' },
+  'quebec':                     { code: 'QC', name: 'Quebec' },
+  'saskatchewan':               { code: 'SK', name: 'Saskatchewan' },
+  'yukon':                      { code: 'YT', name: 'Yukon' }
+};
+
+/**
+ * Whitelisted category landing pages — 12 categories from the admin form
+ * (CAT_ICONS in index.html). "Other" is excluded — too generic to rank.
+ * Slug → DB-stored category name (exact-match for filtering).
+ */
+const CATEGORY_SLUGS = {
+  'hospitality-tourism':        'Hospitality & Tourism',
+  'food-services':              'Food Services',
+  'construction':               'Construction',
+  'health-care':                'Health Care',
+  'retail':                     'Retail',
+  'transportation-logistics':   'Transportation & Logistics',
+  'general-labour':             'General Labour',
+  'child-care':                 'Child Care',
+  'manufacturing':              'Manufacturing',
+  'technology':                 'Technology',
+  'education':                  'Education',
+  'agriculture':                'Agriculture'
+};
+
+export { PROVINCE_SLUGS, CATEGORY_SLUGS };
+
+/**
  * Multi-mode SEO renderer (single endpoint to stay under Vercel Hobby 12-function cap).
  *
  *   GET /jobs/:id          → renderJobDetail (bots get HTML, humans 302→SPA)
@@ -35,6 +78,16 @@ export default async function handler(req, res) {
     return slug
       ? renderListingPage('employer', String(slug), req, res)
       : renderIndexPage('employer', req, res);
+  }
+  if (type === 'province' && slug) {
+    const meta = PROVINCE_SLUGS[String(slug).toLowerCase()];
+    if (!meta) return res.redirect(302, BASE + '/');
+    return renderProvinceCategoryPage('province', String(slug).toLowerCase(), meta, req, res);
+  }
+  if (type === 'category' && slug) {
+    const dbName = CATEGORY_SLUGS[String(slug).toLowerCase()];
+    if (!dbName) return res.redirect(302, BASE + '/');
+    return renderProvinceCategoryPage('category', String(slug).toLowerCase(), { dbName }, req, res);
   }
 
   if (!id) return res.redirect(301, BASE + '/');
@@ -704,6 +757,167 @@ ${matched.length > 50 ? '<p style="color:#5A5A5A;font-size:14px;margin-top:24px"
   // Edge-cache for 5 minutes; revalidate in background. Safe because content
   // is identical for bots and humans (no UA-variant response).
   res.setHeader('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=60');
+  return res.status(200).send(html);
+}
+
+/**
+ * Render a province- or category-filtered landing page.
+ *   /jobs-in-:province  → 13 fixed pages (lessons/seo-landing-pages.md "TIJ pattern")
+ *   /:category-jobs     → 12 fixed pages (Hospitality & Tourism, etc.)
+ *
+ * Compared to renderListingPage (location/employer = dynamic N×M):
+ *   - Slug whitelist gates unknown values to 302 home (no empty index pages)
+ *   - Renders even when 0 active jobs (with "check back" copy) — fixed-axis
+ *     pages are stable URLs we want indexed even on empty days
+ *   - CollectionPage + ItemList JSON-LD (matches TIJ schema convention)
+ *   - Cross-axis links: province pages link to all 12 categories, vice-versa
+ */
+async function renderProvinceCategoryPage(type, slug, meta, req, res) {
+  const LIST_COLS = 'job_id, title, company, loc, prov, type, wage, category, remote, posted_date, created_at, exp_date, status';
+
+  let query = sb.from('jobs').select(LIST_COLS).eq('status', 'active');
+  if (type === 'province') {
+    query = query.eq('prov', meta.code);
+  } else {
+    query = query.eq('category', meta.dbName);
+  }
+  const { data: matched } = await query
+    .order('created_at', { ascending: false })
+    .limit(100);
+
+  const jobs = matched || [];
+  const displayName = type === 'province' ? meta.name : meta.dbName;
+  const url = BASE + (type === 'province' ? '/jobs-in-' + slug : '/' + slug + '-jobs');
+
+  const pageTitle = type === 'province'
+    ? `Youth Jobs in ${displayName} — YouthHire`
+    : `${displayName} Jobs — YouthHire`;
+  const pageDesc = type === 'province'
+    ? `${jobs.length} active youth ${jobs.length === 1 ? 'job' : 'jobs'} in ${displayName}. Entry-level, part-time, and first-job opportunities for students, new grads, and young workers.`
+    : `${jobs.length} active ${displayName.toLowerCase()} ${jobs.length === 1 ? 'job' : 'jobs'} for youth across Canada. Entry-level, part-time, and first-job opportunities for students and new grads.`;
+  const h1 = type === 'province'
+    ? `Youth jobs in ${displayName}`
+    : `${displayName} jobs for youth`;
+
+  // CollectionPage wrapper (richer than bare ItemList — TIJ schema convention).
+  // ItemList.itemListElement uses ListItem(position+url+name) only — do NOT
+  // re-emit JobPosting here; the full schema lives at /jobs/:id and Google
+  // would otherwise dedupe/confuse cross-page citations.
+  const collectionLd = JSON.stringify({
+    "@context": "https://schema.org",
+    "@type": "CollectionPage",
+    "@id": url,
+    "url": url,
+    "name": pageTitle,
+    "description": pageDesc,
+    "isPartOf": { "@type": "WebSite", "@id": BASE + "/#website", "url": BASE, "name": "YouthHire" },
+    "mainEntity": {
+      "@type": "ItemList",
+      "numberOfItems": jobs.length,
+      "itemListElement": jobs.slice(0, 50).map((j, i) => ({
+        "@type": "ListItem",
+        "position": i + 1,
+        "url": BASE + '/jobs/' + j.job_id,
+        "name": j.title
+      }))
+    }
+  }).replace(/<\//g, '<\\/');
+
+  const breadcrumbLd = JSON.stringify({
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      { "@type": "ListItem", "position": 1, "name": "Home", "item": BASE },
+      { "@type": "ListItem", "position": 2, "name": displayName, "item": url }
+    ]
+  }).replace(/<\//g, '<\\/');
+
+  // Cross-axis links: province page links to all 12 categories; vice-versa.
+  // Distributes link equity across the 25-page matrix.
+  const crossLinks = type === 'province'
+    ? Object.entries(CATEGORY_SLUGS).map(([s, n]) => `<a href="${BASE}/${s}-jobs" style="color:#5A5A5A;font-size:13px;margin:0 8px 4px 0;display:inline-block">${esc(n)}</a>`).join('')
+    : Object.entries(PROVINCE_SLUGS).map(([s, m]) => `<a href="${BASE}/jobs-in-${s}" style="color:#5A5A5A;font-size:13px;margin:0 8px 4px 0;display:inline-block">${esc(m.name)}</a>`).join('');
+
+  const cardsHtml = jobs.length > 0
+    ? jobs.slice(0, 50).map(j => {
+        const normLoc = normalizeLoc(j.loc, j.prov);
+        return `<li class="card">
+  <a href="${BASE}/jobs/${j.job_id}" class="card-title">${esc(j.title)}</a>
+  <div class="card-meta">${j.company ? esc(j.company) + ' · ' : ''}${normLoc ? esc(normLoc) + (j.prov ? ', ' + esc(j.prov) : '') : ''}${j.type ? ' · ' + esc(j.type) : ''}${j.wage ? ' · ' + esc(j.wage) : ''}${j.remote && /remote/i.test(j.remote) ? ' · 🏠 Remote' : ''}</div>
+</li>`;
+      }).join('\n')
+    : '';
+
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${esc(pageTitle)}</title>
+<meta name="description" content="${esc(pageDesc)}">
+<link rel="canonical" href="${url}">
+<meta name="robots" content="index, follow">
+<meta property="og:type" content="website">
+<meta property="og:title" content="${esc(pageTitle)}">
+<meta property="og:description" content="${esc(pageDesc)}">
+<meta property="og:url" content="${url}">
+<meta property="og:site_name" content="YouthHire">
+<meta property="og:locale" content="en_CA">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="${esc(pageTitle)}">
+<meta name="twitter:description" content="${esc(pageDesc)}">
+<script type="application/ld+json">${collectionLd}</script>
+<script type="application/ld+json">${breadcrumbLd}</script>
+<style>
+body{font-family:system-ui,sans-serif;max-width:900px;margin:40px auto;padding:0 20px;color:#0F0F0F;line-height:1.6}
+h1{color:#2563EB;font-size:28px;margin-bottom:4px}
+.lede{color:#5A5A5A;margin-bottom:32px}
+ul.cards{list-style:none;padding:0;margin:0}
+.card{padding:16px;border:1px solid #E2E2DC;border-radius:10px;margin-bottom:12px;transition:border-color .15s}
+.card:hover{border-color:#2563EB}
+.card-title{font-weight:700;font-size:17px;color:#2563EB;text-decoration:none}
+.card-title:hover{text-decoration:underline}
+.card-meta{font-size:13px;color:#5A5A5A;margin-top:4px}
+nav{margin-bottom:32px;font-size:14px}
+.cta{display:inline-block;background:#2563EB;color:#fff;padding:14px 28px;border-radius:10px;text-decoration:none;font-weight:700;margin:24px 0}
+.empty{padding:32px;border:1px dashed #E2E2DC;border-radius:10px;text-align:center;color:#5A5A5A;margin:24px 0}
+.cross{margin-top:48px;padding:20px;background:#FAFAF7;border-radius:10px}
+.cross h2{font-size:14px;text-transform:uppercase;letter-spacing:.5px;color:#5A5A5A;margin:0 0 12px;font-weight:600}
+.footer{margin-top:48px;padding-top:20px;border-top:1px solid #E2E2DC;font-size:13px;color:#919191}
+a{color:#2563EB}
+</style>
+</head>
+<body>
+<nav>
+<a href="${BASE}" style="font-weight:800;font-size:20px;color:#2563EB">YouthHire</a>
+<span style="color:#919191;margin:0 8px">›</span>
+<span>${esc(displayName)}</span>
+</nav>
+
+<h1>${esc(h1)}</h1>
+<p class="lede">${jobs.length === 0 ? 'No active openings right now — check back soon, or browse all current jobs.' : `${jobs.length} active ${jobs.length === 1 ? 'opening' : 'openings'} for students, new grads, and young workers.`}</p>
+
+${cardsHtml ? `<ul class="cards">\n${cardsHtml}\n</ul>` : '<div class="empty">No openings yet — <a href="' + BASE + '">browse all jobs</a> or check back soon.</div>'}
+
+${jobs.length > 50 ? '<p style="color:#5A5A5A;font-size:14px;margin-top:24px">Showing the 50 most recent. <a href="' + BASE + '">Browse all jobs →</a></p>' : ''}
+
+<a href="${BASE}" class="cta">Browse all jobs →</a>
+
+<section class="cross">
+<h2>${type === 'province' ? 'Browse by category' : 'Browse by province'}</h2>
+${crossLinks}
+</section>
+
+<div class="footer">
+<p><strong>YouthHire</strong> — Canada's youth job board. Connecting students, new grads, and young workers with employers hiring for entry-level, part-time, and first-job opportunities.</p>
+<p><a href="${BASE}/about">About</a> · <a href="${BASE}/contact">Contact</a> · <a href="${BASE}/privacy">Privacy</a> · <a href="${BASE}/terms">Terms</a></p>
+</div>
+
+</body>
+</html>`;
+
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
+  res.setHeader('Cache-Control', 'public, s-maxage=600, stale-while-revalidate=120');
   return res.status(200).send(html);
 }
 

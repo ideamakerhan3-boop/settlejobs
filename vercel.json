@@ -22,7 +22,9 @@
     { "source": "/locations", "destination": "/api/job-page?type=location" },
     { "source": "/locations/:slug", "destination": "/api/job-page?type=location&slug=:slug" },
     { "source": "/employers", "destination": "/api/job-page?type=employer" },
-    { "source": "/employers/:slug", "destination": "/api/job-page?type=employer&slug=:slug" }
+    { "source": "/employers/:slug", "destination": "/api/job-page?type=employer&slug=:slug" },
+    { "source": "/jobs-in-:province", "destination": "/api/job-page?type=province&slug=:province" },
+    { "source": "/:category-jobs", "destination": "/api/job-page?type=category&slug=:category" }
   ],
   "headers": [
     {
