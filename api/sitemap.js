@@ -6,7 +6,7 @@ const sb = createClient(
 );
 
 /**
- * Slugify mirroring api/job-page.js — keep these in sync.
+ * Slugify + normalizeLoc — mirrored from api/job-page.js, keep in sync.
  */
 function slugify(s) {
   if (!s) return '';
@@ -15,6 +15,13 @@ function slugify(s) {
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '')
     .substring(0, 80);
+}
+
+function normalizeLoc(loc, prov) {
+  if (!loc) return '';
+  if (!prov) return String(loc).trim();
+  const re = new RegExp(',?\\s*' + String(prov).replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\s*$', 'i');
+  return String(loc).replace(re, '').trim();
 }
 
 export default async function handler(req, res) {
@@ -54,11 +61,13 @@ export default async function handler(req, res) {
   </url>`;
   });
 
-  // Location landing URLs (distinct slug from loc + prov)
+  // Location landing URLs (distinct slug from normalized loc + prov,
+  // avoiding "langford-bc-bc" when DB already encodes prov in `loc`).
   const locMap = new Map();
   for (const j of jobs) {
     if (!j.loc) continue;
-    const slug = slugify(j.loc + (j.prov ? '-' + j.prov : ''));
+    const norm = normalizeLoc(j.loc, j.prov);
+    const slug = slugify(norm + (j.prov ? '-' + j.prov : ''));
     if (!slug) continue;
     const prev = locMap.get(slug);
     const lastmod = j.created_at ? j.created_at.split('T')[0] : null;

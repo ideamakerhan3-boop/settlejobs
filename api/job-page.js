@@ -250,7 +250,7 @@ ${!isExpired ? '<a href="' + BASE + '/#detail-' + id + '" class="cta">View Full 
 
 <div class="footer">
 <p style="margin-bottom:12px"><strong>More opportunities</strong></p>
-<p style="margin-bottom:12px">${job.loc ? '<a href="' + BASE + '/locations/' + slugify(job.loc + (job.prov ? '-' + job.prov : '')) + '">More jobs in ' + esc(job.loc) + (job.prov ? ', ' + esc(job.prov) : '') + '</a>' : ''}${job.loc && job.company ? ' · ' : ''}${job.company ? '<a href="' + BASE + '/employers/' + slugify(job.company) + '">More jobs at ' + esc(job.company) + '</a>' : ''}</p>
+<p style="margin-bottom:12px">${job.loc ? '<a href="' + BASE + '/locations/' + slugify(normalizeLoc(job.loc, job.prov) + (job.prov ? '-' + job.prov : '')) + '">More jobs in ' + esc(normalizeLoc(job.loc, job.prov)) + (job.prov ? ', ' + esc(job.prov) : '') + '</a>' : ''}${job.loc && job.company ? ' · ' : ''}${job.company ? '<a href="' + BASE + '/employers/' + slugify(job.company) + '">More jobs at ' + esc(job.company) + '</a>' : ''}</p>
 <p><strong>YouthHire</strong> — Canada's youth job board. Connecting students, new grads, and young workers with employers hiring for entry-level, part-time, and first-job opportunities.</p>
 <p><a href="${BASE}/about">About</a> · <a href="${BASE}/contact">Contact</a> · <a href="${BASE}/privacy">Privacy</a> · <a href="${BASE}/terms">Terms</a></p>
 </div>
@@ -367,6 +367,18 @@ function mapExpToMonths(exp) {
 }
 
 /**
+ * Strip a trailing province code from a location string when the prov column
+ * already encodes it (DB has both "Langford, BC" + prov="BC" → "Langford").
+ * Prevents duplicated display ("Langford, BC, BC") and bloated slugs ("langford-bc-bc").
+ */
+function normalizeLoc(loc, prov) {
+  if (!loc) return '';
+  if (!prov) return String(loc).trim();
+  const re = new RegExp(',?\\s*' + String(prov).replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\s*$', 'i');
+  return String(loc).replace(re, '').trim();
+}
+
+/**
  * Slugify a string into a URL-safe segment.
  * "Vancouver, BC" → "vancouver-bc"
  * "City of Vancouver" → "city-of-vancouver"
@@ -406,10 +418,16 @@ async function renderListingPage(type, slug, req, res) {
     return renderEmptyListing(type, cleanSlug, res);
   }
 
-  // Filter to jobs whose slug matches the requested one
+  // Filter to jobs whose slug matches the requested one.
+  // For locations we accept BOTH the normalized slug (vancouver-bc) and the
+  // legacy double-encoded slug (vancouver-bc-bc) so old sitemap URLs cached
+  // at the edge keep resolving during the rollover window.
   const matched = jobs.filter(j => {
     if (type === 'location') {
-      return slugify((j.loc || '') + (j.prov ? '-' + j.prov : '')) === cleanSlug;
+      const norm = normalizeLoc(j.loc, j.prov);
+      const newSlug    = slugify(norm + (j.prov ? '-' + j.prov : ''));
+      const legacySlug = slugify((j.loc || '') + (j.prov ? '-' + j.prov : ''));
+      return newSlug === cleanSlug || legacySlug === cleanSlug;
     } else {
       return slugify(j.company || '') === cleanSlug;
     }
@@ -419,10 +437,11 @@ async function renderListingPage(type, slug, req, res) {
     return renderEmptyListing(type, cleanSlug, res);
   }
 
-  // Derive display name from the first matched row (DB is source of truth)
+  // Derive display name from the first matched row (DB is source of truth).
+  // Strip duplicate province encoded in `loc` (DB has both "Langford, BC" + prov="BC").
   const sample = matched[0];
   const displayName = type === 'location'
-    ? (sample.loc || '') + (sample.prov ? ', ' + sample.prov : '')
+    ? normalizeLoc(sample.loc, sample.prov) + (sample.prov ? ', ' + sample.prov : '')
     : (sample.company || cleanSlug);
 
   const url = BASE + (type === 'location' ? '/locations/' : '/employers/') + cleanSlug;
@@ -453,10 +472,13 @@ async function renderListingPage(type, slug, req, res) {
   }).replace(/<\//g, '<\\/');
 
   const cardsHtml = matched.slice(0, 50).map(j => {
-    const otherSlug = type === 'location' ? slugify(j.company || '') : slugify((j.loc || '') + (j.prov ? '-' + j.prov : ''));
+    const normLoc = normalizeLoc(j.loc, j.prov);
+    const otherSlug = type === 'location'
+      ? slugify(j.company || '')
+      : slugify(normLoc + (j.prov ? '-' + j.prov : ''));
     const otherLink = type === 'location'
       ? (j.company ? '<a href="' + BASE + '/employers/' + otherSlug + '">' + esc(j.company) + '</a>' : '')
-      : (j.loc ? '<a href="' + BASE + '/locations/' + otherSlug + '">' + esc(j.loc) + (j.prov ? ', ' + esc(j.prov) : '') + '</a>' : '');
+      : (j.loc ? '<a href="' + BASE + '/locations/' + otherSlug + '">' + esc(normLoc) + (j.prov ? ', ' + esc(j.prov) : '') + '</a>' : '');
     return `<li class="card">
   <a href="${BASE}/jobs/${j.job_id}" class="card-title">${esc(j.title)}</a>
   <div class="card-meta">${otherLink}${j.type ? ' · ' + esc(j.type) : ''}${j.wage ? ' · ' + esc(j.wage) : ''}${j.remote && /remote/i.test(j.remote) ? ' · 🏠 Remote' : ''}</div>
