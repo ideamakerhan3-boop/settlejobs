@@ -19,7 +19,9 @@
     { "source": "/reset", "destination": "/index.html" },
     { "source": "/home", "destination": "/index.html" },
     { "source": "/jobs/:id", "destination": "/api/job-page?id=:id" },
+    { "source": "/locations", "destination": "/api/job-page?type=location" },
     { "source": "/locations/:slug", "destination": "/api/job-page?type=location&slug=:slug" },
+    { "source": "/employers", "destination": "/api/job-page?type=employer" },
     { "source": "/employers/:slug", "destination": "/api/job-page?type=employer&slug=:slug" }
   ],
   "headers": [

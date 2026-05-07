@@ -2,7 +2,7 @@ import { createClient } from '@supabase/supabase-js';
 import bcrypt from 'bcryptjs';
 import { rateLimit } from './_lib/ratelimit.js';
 import { verifyTurnstile } from './_lib/turnstile.js';
-import { notifyIndexNow } from './_lib/indexnow.js';
+import { notifyIndexNow, notifyIndexNowJob } from './_lib/indexnow.js';
 
 // Service key bypasses RLS — all sensitive account/job operations go through here.
 const sb = createClient(
@@ -372,9 +372,11 @@ export default async function handler(req, res) {
       if (!clean.job_id) return res.status(400).json({ error: 'job_id required' });
       const { data, error } = await sb.from('jobs').upsert(clean, { onConflict: 'job_id' }).select();
       if (error) { console.error('create_job error:', error.message, 'payload keys:', Object.keys(clean)); return res.status(500).json({ error: 'Create failed: ' + error.message }); }
-      // Notify search engines when an active job is published (fire-and-forget)
+      // Notify search engines when an active job is published (fire-and-forget).
+      // Submit the job URL + its location/employer landing pages + browse
+      // indexes so Google re-crawls the long-tail matrix on every change.
       if (data && data[0] && data[0].status === 'active') {
-        notifyIndexNow(clean.job_id).catch(() => {});
+        notifyIndexNowJob(data[0]).catch(() => {});
       }
       return res.status(200).json({ job: data && data[0] });
     }
