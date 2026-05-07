@@ -1,4 +1,8 @@
 import { createClient } from '@supabase/supabase-js';
+// Cross-import: pulls job-page.js into this function's bundle (~small size
+// bump, no functional impact — see lessons/seo-landing-pages.md "함정 2").
+// Keeps the slug whitelists DRY across renderer and sitemap.
+import { PROVINCE_SLUGS, CATEGORY_SLUGS } from './job-page.js';
 
 const sb = createClient(
   process.env.SUPABASE_URL,
@@ -103,6 +107,24 @@ export default async function handler(req, res) {
   </url>`;
   });
 
+  // Fixed-axis landing pages — 13 provinces + 12 categories (see PROVINCE_SLUGS
+  // and CATEGORY_SLUGS in api/job-page.js). These render even when 0 active jobs,
+  // so we always emit them to keep stable indexed URLs.
+  const provinceEntries = Object.keys(PROVINCE_SLUGS).map(function(slug) {
+    return `  <url>
+    <loc>${base}/jobs-in-${slug}</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.7</priority>
+  </url>`;
+  });
+  const categoryEntries = Object.keys(CATEGORY_SLUGS).map(function(slug) {
+    return `  <url>
+    <loc>${base}/${slug}-jobs</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.7</priority>
+  </url>`;
+  });
+
   const staticXml = staticPages.map(function(p) {
     return `  <url>
     <loc>${base}${p.loc}</loc>
@@ -114,6 +136,8 @@ export default async function handler(req, res) {
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 ${staticXml}
+${provinceEntries.join('\n')}
+${categoryEntries.join('\n')}
 ${jobEntries.join('\n')}
 ${locEntries.join('\n')}
 ${empEntries.join('\n')}

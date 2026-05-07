@@ -23,6 +23,29 @@ function normalizeLoc(loc, prov) {
   return String(loc).replace(re, '').trim();
 }
 
+// Mirror of PROVINCE_SLUGS / CATEGORY_SLUGS in api/job-page.js, inverted
+// for code/name → slug lookups. Keep in sync.
+const PROVINCE_CODE_TO_SLUG = {
+  'AB': 'alberta', 'BC': 'british-columbia', 'MB': 'manitoba',
+  'NB': 'new-brunswick', 'NL': 'newfoundland-and-labrador', 'NS': 'nova-scotia',
+  'NT': 'northwest-territories', 'NU': 'nunavut', 'ON': 'ontario',
+  'PE': 'prince-edward-island', 'QC': 'quebec', 'SK': 'saskatchewan', 'YT': 'yukon'
+};
+const CATEGORY_NAME_TO_SLUG = {
+  'Hospitality & Tourism': 'hospitality-tourism',
+  'Food Services': 'food-services',
+  'Construction': 'construction',
+  'Health Care': 'health-care',
+  'Retail': 'retail',
+  'Transportation & Logistics': 'transportation-logistics',
+  'General Labour': 'general-labour',
+  'Child Care': 'child-care',
+  'Manufacturing': 'manufacturing',
+  'Technology': 'technology',
+  'Education': 'education',
+  'Agriculture': 'agriculture'
+};
+
 async function submit(urls) {
   if (!urls || urls.length === 0) return;
   try {
@@ -74,6 +97,14 @@ export async function notifyIndexNowJob(job) {
     const empSlug = slugify(job.company);
     if (empSlug) urls.push(`${BASE_URL}/employers/${empSlug}`);
   }
+
+  // Province landing — `prov` is a 2-letter code; map to full slug
+  const provSlug = PROVINCE_CODE_TO_SLUG[String(job.prov || '').toUpperCase()];
+  if (provSlug) urls.push(`${BASE_URL}/jobs-in-${provSlug}`);
+
+  // Category landing — `category` is the DB-stored display name; map to slug
+  const catSlug = CATEGORY_NAME_TO_SLUG[job.category];
+  if (catSlug) urls.push(`${BASE_URL}/${catSlug}-jobs`);
 
   // Top-level browse indexes — count/membership changes when a job is added
   urls.push(`${BASE_URL}/locations`);
