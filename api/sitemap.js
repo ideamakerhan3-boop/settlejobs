@@ -36,6 +36,8 @@ export default async function handler(req, res) {
   // which Google sees as duplicates. Removed to fix Search Console "duplicate canonical" warnings.
   const staticPages = [
     { loc: '/', changefreq: 'daily', priority: '1.0' },
+    { loc: '/locations', changefreq: 'daily', priority: '0.7' },
+    { loc: '/employers', changefreq: 'daily', priority: '0.7' },
   ];
 
   // Active jobs from DB — single fetch reused for /jobs/, /locations/, /employers/

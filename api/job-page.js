@@ -26,11 +26,15 @@ const BOT_RE = /bot|crawl|spider|slurp|Googlebot|Bingbot|DuckDuck|Yandex|Baidu|f
 export default async function handler(req, res) {
   const { id, type, slug } = req.query;
 
-  if (type === 'location' && slug) {
-    return renderListingPage('location', String(slug), req, res);
+  if (type === 'location') {
+    return slug
+      ? renderListingPage('location', String(slug), req, res)
+      : renderIndexPage('location', req, res);
   }
-  if (type === 'employer' && slug) {
-    return renderListingPage('employer', String(slug), req, res);
+  if (type === 'employer') {
+    return slug
+      ? renderListingPage('employer', String(slug), req, res)
+      : renderIndexPage('employer', req, res);
   }
 
   if (!id) return res.redirect(301, BASE + '/');
@@ -390,6 +394,154 @@ function slugify(s) {
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '')
     .substring(0, 80);
+}
+
+/**
+ * Render a top-level browse index — `/locations` lists every distinct city
+ * with job counts, `/employers` lists every distinct company. Completes the
+ * crawl graph (BreadcrumbList JSON-LD on listing pages references these URLs)
+ * and gives Google a hub page tying the long-tail matrix together.
+ */
+async function renderIndexPage(type, req, res) {
+  const LIST_COLS = 'job_id, company, loc, prov, status';
+  const { data: jobs } = await sb.from('jobs')
+    .select(LIST_COLS)
+    .eq('status', 'active')
+    .limit(2000);
+
+  // Group by slug, capturing display name and count
+  const groups = new Map();  // slug → { name, count }
+  for (const j of (jobs || [])) {
+    let slug, name;
+    if (type === 'location') {
+      if (!j.loc) continue;
+      const norm = normalizeLoc(j.loc, j.prov);
+      slug = slugify(norm + (j.prov ? '-' + j.prov : ''));
+      name = norm + (j.prov ? ', ' + j.prov : '');
+    } else {
+      if (!j.company) continue;
+      slug = slugify(j.company);
+      name = j.company;
+    }
+    if (!slug) continue;
+    const prev = groups.get(slug);
+    if (prev) prev.count++;
+    else groups.set(slug, { name, count: 1 });
+  }
+
+  // Sort alphabetically by display name
+  const sorted = Array.from(groups.entries())
+    .map(([slug, info]) => ({ slug, ...info }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+
+  const url = BASE + (type === 'location' ? '/locations' : '/employers');
+  const pageTitle = type === 'location'
+    ? 'Browse jobs by city — YouthHire'
+    : 'Browse jobs by employer — YouthHire';
+  const pageDesc = type === 'location'
+    ? `Find youth jobs in ${sorted.length} ${sorted.length === 1 ? 'city' : 'cities'} across Canada. Entry-level, part-time, and first-job opportunities for students and new grads.`
+    : `Browse youth job openings from ${sorted.length} Canadian ${sorted.length === 1 ? 'employer' : 'employers'}. Entry-level, part-time, and first-job opportunities.`;
+  const h1 = type === 'location' ? 'Jobs by city' : 'Jobs by employer';
+
+  const itemListLd = JSON.stringify({
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    "itemListElement": sorted.slice(0, 200).map((g, i) => ({
+      "@type": "ListItem",
+      "position": i + 1,
+      "url": BASE + (type === 'location' ? '/locations/' : '/employers/') + g.slug,
+      "name": g.name
+    }))
+  }).replace(/<\//g, '<\\/');
+
+  const breadcrumbLd = JSON.stringify({
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      { "@type": "ListItem", "position": 1, "name": "Home", "item": BASE },
+      { "@type": "ListItem", "position": 2, "name": type === 'location' ? "Locations" : "Employers", "item": url }
+    ]
+  }).replace(/<\//g, '<\\/');
+
+  // Group cities by province for nicer browsing (locations only)
+  let listHtml;
+  if (type === 'location') {
+    const byProv = new Map();
+    for (const g of sorted) {
+      const provMatch = g.name.match(/, ([A-Z]{2})$/);
+      const provKey = provMatch ? provMatch[1] : 'Other';
+      if (!byProv.has(provKey)) byProv.set(provKey, []);
+      byProv.get(provKey).push(g);
+    }
+    listHtml = Array.from(byProv.entries())
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .map(([prov, items]) => `<section style="margin-bottom:32px">
+  <h2 style="font-size:18px;margin:0 0 12px;color:#0F0F0F">${esc(prov)}</h2>
+  <ul style="list-style:none;padding:0;margin:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px">
+${items.map(g => `    <li><a href="${BASE}/locations/${g.slug}" style="color:#2563EB;text-decoration:none">${esc(g.name.replace(/, [A-Z]{2}$/, ''))}</a> <span style="color:#919191">(${g.count})</span></li>`).join('\n')}
+  </ul>
+</section>`).join('\n');
+  } else {
+    listHtml = `<ul style="list-style:none;padding:0;margin:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:8px">
+${sorted.map(g => `  <li><a href="${BASE}/employers/${g.slug}" style="color:#2563EB;text-decoration:none">${esc(g.name)}</a> <span style="color:#919191">(${g.count})</span></li>`).join('\n')}
+</ul>`;
+  }
+
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${esc(pageTitle)}</title>
+<meta name="description" content="${esc(pageDesc)}">
+<link rel="canonical" href="${url}">
+<meta name="robots" content="index, follow">
+<meta property="og:type" content="website">
+<meta property="og:title" content="${esc(pageTitle)}">
+<meta property="og:description" content="${esc(pageDesc)}">
+<meta property="og:url" content="${url}">
+<meta property="og:site_name" content="YouthHire">
+<meta property="og:locale" content="en_CA">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="${esc(pageTitle)}">
+<meta name="twitter:description" content="${esc(pageDesc)}">
+<script type="application/ld+json">${itemListLd}</script>
+<script type="application/ld+json">${breadcrumbLd}</script>
+<style>
+body{font-family:system-ui,sans-serif;max-width:1000px;margin:40px auto;padding:0 20px;color:#0F0F0F;line-height:1.6}
+h1{color:#2563EB;font-size:28px;margin-bottom:4px}
+.lede{color:#5A5A5A;margin-bottom:32px}
+nav{margin-bottom:32px;font-size:14px}
+.cta{display:inline-block;background:#2563EB;color:#fff;padding:14px 28px;border-radius:10px;text-decoration:none;font-weight:700;margin:24px 0}
+.footer{margin-top:48px;padding-top:20px;border-top:1px solid #E2E2DC;font-size:13px;color:#919191}
+a:hover{text-decoration:underline}
+</style>
+</head>
+<body>
+<nav>
+<a href="${BASE}" style="font-weight:800;font-size:20px;color:#2563EB">YouthHire</a>
+<span style="color:#919191;margin:0 8px">›</span>
+<span>${type === 'location' ? 'Locations' : 'Employers'}</span>
+</nav>
+
+<h1>${h1}</h1>
+<p class="lede">${sorted.length} ${type === 'location' ? (sorted.length === 1 ? 'city' : 'cities') : (sorted.length === 1 ? 'employer' : 'employers')} with active openings. ${type === 'location' ? 'See <a href="' + BASE + '/employers">employers</a>.' : 'See <a href="' + BASE + '/locations">locations</a>.'}</p>
+
+${listHtml || '<p style="color:#5A5A5A">No active openings yet.</p>'}
+
+<a href="${BASE}" class="cta">Browse all jobs →</a>
+
+<div class="footer">
+<p><strong>YouthHire</strong> — Canada's youth job board. Connecting students, new grads, and young workers with employers hiring for entry-level, part-time, and first-job opportunities.</p>
+<p><a href="${BASE}/about">About</a> · <a href="${BASE}/contact">Contact</a> · <a href="${BASE}/privacy">Privacy</a> · <a href="${BASE}/terms">Terms</a></p>
+</div>
+
+</body>
+</html>`;
+
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
+  res.setHeader('Cache-Control', 'public, s-maxage=600, stale-while-revalidate=120');
+  return res.status(200).send(html);
 }
 
 /**
