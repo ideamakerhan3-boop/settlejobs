@@ -2,7 +2,7 @@ import { createClient } from '@supabase/supabase-js';
 // Cross-import: pulls job-page.js into this function's bundle (~small size
 // bump, no functional impact — see lessons/seo-landing-pages.md "함정 2").
 // Keeps the slug whitelists DRY across renderer and sitemap.
-import { PROVINCE_SLUGS, CATEGORY_SLUGS } from './job-page.js';
+import { PROVINCE_SLUGS, CATEGORY_SLUGS, EMPLOYMENT_TYPE_SLUGS } from './job-page.js';
 
 const sb = createClient(
   process.env.SUPABASE_URL,
@@ -134,6 +134,15 @@ export default async function handler(req, res) {
     <priority>0.7</priority>
   </url>`;
   });
+  // Employment-type axis (5 fixed: full-time, part-time, contract, seasonal, casual).
+  // Falls through the same `/:category-jobs` rewrite — handler resolves which axis.
+  const employmentTypeEntries = Object.keys(EMPLOYMENT_TYPE_SLUGS).map(function(slug) {
+    return `  <url>
+    <loc>${base}/${slug}-jobs</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.7</priority>
+  </url>`;
+  });
 
   const staticXml = staticPages.map(function(p) {
     return `  <url>
@@ -148,6 +157,7 @@ export default async function handler(req, res) {
 ${staticXml}
 ${provinceEntries.join('\n')}
 ${categoryEntries.join('\n')}
+${employmentTypeEntries.join('\n')}
 ${jobEntries.join('\n')}
 ${locEntries.join('\n')}
 ${empEntries.join('\n')}
