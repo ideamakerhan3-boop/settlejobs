@@ -52,7 +52,22 @@ const CATEGORY_SLUGS = {
   'agriculture':                'Agriculture'
 };
 
-export { PROVINCE_SLUGS, CATEGORY_SLUGS };
+/**
+ * Whitelisted employment-type landing pages — 5 types from the admin form.
+ * Slug → DB-stored type (exact-match for `eq('type', dbName)`).
+ * Falls through the same `/:category-jobs` rewrite — handler tries CATEGORY
+ * first, then EMPLOYMENT_TYPE, then honest-404. Heavy search volume:
+ * "part time jobs near me", "casual jobs canada", etc.
+ */
+const EMPLOYMENT_TYPE_SLUGS = {
+  'full-time':  'Full-Time',
+  'part-time':  'Part-Time',
+  'contract':   'Contract',
+  'seasonal':   'Seasonal',
+  'casual':     'Casual',
+};
+
+export { PROVINCE_SLUGS, CATEGORY_SLUGS, EMPLOYMENT_TYPE_SLUGS };
 
 /**
  * Multi-mode SEO renderer (single endpoint to stay under Vercel Hobby 12-function cap).
@@ -81,13 +96,18 @@ export default async function handler(req, res) {
   }
   if (type === 'province' && slug) {
     const meta = PROVINCE_SLUGS[String(slug).toLowerCase()];
-    if (!meta) return res.redirect(302, BASE + '/');
+    if (!meta) return renderHonest404(req, res, BASE + '/jobs-in-' + slug);
     return renderProvinceCategoryPage('province', String(slug).toLowerCase(), meta, req, res);
   }
   if (type === 'category' && slug) {
-    const dbName = CATEGORY_SLUGS[String(slug).toLowerCase()];
-    if (!dbName) return res.redirect(302, BASE + '/');
-    return renderProvinceCategoryPage('category', String(slug).toLowerCase(), { dbName }, req, res);
+    // Order matters: CATEGORY first, then EMPLOYMENT_TYPE (both share the
+    // `/:category-jobs` rewrite), then honest 404 + noindex (no soft-404 redirect).
+    const slugLower = String(slug).toLowerCase();
+    const catName = CATEGORY_SLUGS[slugLower];
+    if (catName) return renderProvinceCategoryPage('category', slugLower, { dbName: catName }, req, res);
+    const empType = EMPLOYMENT_TYPE_SLUGS[slugLower];
+    if (empType) return renderProvinceCategoryPage('employment_type', slugLower, { dbName: empType, displayName: empType }, req, res);
+    return renderHonest404(req, res, BASE + '/' + slug + '-jobs');
   }
 
   if (!id) return res.redirect(301, BASE + '/');
@@ -107,7 +127,10 @@ export default async function handler(req, res) {
     .maybeSingle();
 
   if (!job) {
-    return res.redirect(302, BASE + '/');
+    // Honest 404 instead of soft-404 redirect — likely a deleted/expired job
+    // that Google still has in its crawl queue. 404+noindex tells Google to
+    // drop it cleanly without diluting the rest of /jobs/* path family.
+    return renderHonest404(req, res, BASE + '/jobs/' + id);
   }
 
   // ISO 8601 dates required by Google for Jobs
@@ -248,6 +271,8 @@ export default async function handler(req, res) {
 <title>${title}</title>
 <meta name="description" content="${desc}">
 <link rel="canonical" href="${url}">
+<link rel="alternate" hreflang="en-CA" href="${url}">
+<link rel="alternate" hreflang="x-default" href="${url}">
 <meta name="robots" content="${robotsContent}">
 <meta property="og:type" content="article">
 <meta property="og:title" content="${title}">
@@ -548,6 +573,8 @@ ${sorted.map(g => `  <li><a href="${BASE}/employers/${g.slug}" style="color:#256
 <title>${esc(pageTitle)}</title>
 <meta name="description" content="${esc(pageDesc)}">
 <link rel="canonical" href="${url}">
+<link rel="alternate" hreflang="en-CA" href="${url}">
+<link rel="alternate" hreflang="x-default" href="${url}">
 <meta name="robots" content="index, follow">
 <meta property="og:type" content="website">
 <meta property="og:title" content="${esc(pageTitle)}">
@@ -610,7 +637,7 @@ ${listHtml || '<p style="color:#5A5A5A">No active openings yet.</p>'}
  */
 async function renderListingPage(type, slug, req, res) {
   const cleanSlug = slugify(slug);  // defend against junk input
-  if (!cleanSlug) return res.redirect(302, BASE + '/');
+  if (!cleanSlug) return renderHonest404(req, res, BASE + '/' + (type === 'location' ? 'locations' : 'employers') + '/' + slug);
 
   const LIST_COLS = 'job_id, title, company, loc, prov, type, wage, category, remote, posted_date, created_at, exp_date, status';
   const { data: jobs } = await sb.from('jobs')
@@ -698,6 +725,8 @@ async function renderListingPage(type, slug, req, res) {
 <title>${esc(pageTitle)}</title>
 <meta name="description" content="${esc(pageDesc)}">
 <link rel="canonical" href="${url}">
+<link rel="alternate" hreflang="en-CA" href="${url}">
+<link rel="alternate" hreflang="x-default" href="${url}">
 <meta name="robots" content="index, follow">
 <meta property="og:type" content="website">
 <meta property="og:title" content="${esc(pageTitle)}">
@@ -778,6 +807,8 @@ async function renderProvinceCategoryPage(type, slug, meta, req, res) {
   let query = sb.from('jobs').select(LIST_COLS).eq('status', 'active');
   if (type === 'province') {
     query = query.eq('prov', meta.code);
+  } else if (type === 'employment_type') {
+    query = query.eq('type', meta.dbName);
   } else {
     query = query.eq('category', meta.dbName);
   }
@@ -787,17 +818,25 @@ async function renderProvinceCategoryPage(type, slug, meta, req, res) {
 
   const jobs = matched || [];
   const displayName = type === 'province' ? meta.name : meta.dbName;
-  const url = BASE + (type === 'province' ? '/jobs-in-' + slug : '/' + slug + '-jobs');
+  const url = BASE + (
+    type === 'province' ? '/jobs-in-' + slug
+    : '/' + slug + '-jobs'  // both 'category' and 'employment_type' use this format
+  );
 
-  const pageTitle = type === 'province'
-    ? `Youth Jobs in ${displayName} — YouthHire`
-    : `${displayName} Jobs — YouthHire`;
-  const pageDesc = type === 'province'
-    ? `${jobs.length} active youth ${jobs.length === 1 ? 'job' : 'jobs'} in ${displayName}. Entry-level, part-time, and first-job opportunities for students, new grads, and young workers.`
-    : `${jobs.length} active ${displayName.toLowerCase()} ${jobs.length === 1 ? 'job' : 'jobs'} for youth across Canada. Entry-level, part-time, and first-job opportunities for students and new grads.`;
-  const h1 = type === 'province'
-    ? `Youth jobs in ${displayName}`
-    : `${displayName} jobs for youth`;
+  let pageTitle, pageDesc, h1;
+  if (type === 'province') {
+    pageTitle = `Youth Jobs in ${displayName} — YouthHire`;
+    pageDesc  = `${jobs.length} active youth ${jobs.length === 1 ? 'job' : 'jobs'} in ${displayName}. Entry-level, part-time, and first-job opportunities for students, new grads, and young workers.`;
+    h1        = `Youth jobs in ${displayName}`;
+  } else if (type === 'employment_type') {
+    pageTitle = `${displayName} Youth Jobs — YouthHire`;
+    pageDesc  = `${jobs.length} active ${displayName.toLowerCase()} ${jobs.length === 1 ? 'job' : 'jobs'} for youth across Canada. ${displayName === 'Casual' ? 'Flexible on-call work' : displayName === 'Seasonal' ? 'Summer and seasonal work' : displayName} for students, new grads, and young workers.`;
+    h1        = `${displayName} jobs for youth`;
+  } else {
+    pageTitle = `${displayName} Jobs — YouthHire`;
+    pageDesc  = `${jobs.length} active ${displayName.toLowerCase()} ${jobs.length === 1 ? 'job' : 'jobs'} for youth across Canada. Entry-level, part-time, and first-job opportunities for students and new grads.`;
+    h1        = `${displayName} jobs for youth`;
+  }
 
   // CollectionPage wrapper (richer than bare ItemList — TIJ schema convention).
   // ItemList.itemListElement uses ListItem(position+url+name) only — do NOT
@@ -832,11 +871,27 @@ async function renderProvinceCategoryPage(type, slug, meta, req, res) {
     ]
   }).replace(/<\//g, '<\\/');
 
-  // Cross-axis links: province page links to all 12 categories; vice-versa.
-  // Distributes link equity across the 25-page matrix.
-  const crossLinks = type === 'province'
-    ? Object.entries(CATEGORY_SLUGS).map(([s, n]) => `<a href="${BASE}/${s}-jobs" style="color:#5A5A5A;font-size:13px;margin:0 8px 4px 0;display:inline-block">${esc(n)}</a>`).join('')
-    : Object.entries(PROVINCE_SLUGS).map(([s, m]) => `<a href="${BASE}/jobs-in-${s}" style="color:#5A5A5A;font-size:13px;margin:0 8px 4px 0;display:inline-block">${esc(m.name)}</a>`).join('');
+  // Cross-axis links — distributes link equity across the 30-page matrix
+  // (13 provinces + 12 categories + 5 employment types). province pages link
+  // to category+employment-type, etc. Always cross to OTHER axes, not own axis.
+  function chip(href, text) {
+    return `<a href="${href}" style="color:#5A5A5A;font-size:13px;margin:0 8px 4px 0;display:inline-block">${esc(text)}</a>`;
+  }
+  const provinceChips      = Object.entries(PROVINCE_SLUGS).map(([s, m]) => chip(`${BASE}/jobs-in-${s}`, m.name)).join('');
+  const categoryChips      = Object.entries(CATEGORY_SLUGS).map(([s, n]) => chip(`${BASE}/${s}-jobs`, n)).join('');
+  const employmentChips    = Object.entries(EMPLOYMENT_TYPE_SLUGS).map(([s, n]) => chip(`${BASE}/${s}-jobs`, n)).join('');
+  let crossLinks, crossLinksHeading;
+  if (type === 'province') {
+    crossLinks = `<div style="margin-bottom:12px"><strong style="font-size:13px;color:#5A5A5A">By category:</strong> ${categoryChips}</div><div><strong style="font-size:13px;color:#5A5A5A">By type:</strong> ${employmentChips}</div>`;
+    crossLinksHeading = 'Refine your search';
+  } else if (type === 'employment_type') {
+    crossLinks = `<div style="margin-bottom:12px"><strong style="font-size:13px;color:#5A5A5A">By province:</strong> ${provinceChips}</div><div><strong style="font-size:13px;color:#5A5A5A">By category:</strong> ${categoryChips}</div>`;
+    crossLinksHeading = 'Refine your search';
+  } else {
+    // category
+    crossLinks = `<div style="margin-bottom:12px"><strong style="font-size:13px;color:#5A5A5A">By province:</strong> ${provinceChips}</div><div><strong style="font-size:13px;color:#5A5A5A">By type:</strong> ${employmentChips}</div>`;
+    crossLinksHeading = 'Refine your search';
+  }
 
   const cardsHtml = jobs.length > 0
     ? jobs.slice(0, 50).map(j => {
@@ -856,6 +911,8 @@ async function renderProvinceCategoryPage(type, slug, meta, req, res) {
 <title>${esc(pageTitle)}</title>
 <meta name="description" content="${esc(pageDesc)}">
 <link rel="canonical" href="${url}">
+<link rel="alternate" hreflang="en-CA" href="${url}">
+<link rel="alternate" hreflang="x-default" href="${url}">
 <meta name="robots" content="index, follow">
 <meta property="og:type" content="website">
 <meta property="og:title" content="${esc(pageTitle)}">
@@ -904,7 +961,7 @@ ${jobs.length > 50 ? '<p style="color:#5A5A5A;font-size:14px;margin-top:24px">Sh
 <a href="${BASE}" class="cta">Browse all jobs →</a>
 
 <section class="cross">
-<h2>${type === 'province' ? 'Browse by category' : 'Browse by province'}</h2>
+<h2>${crossLinksHeading}</h2>
 ${crossLinks}
 </section>
 
@@ -922,6 +979,51 @@ ${crossLinks}
 }
 
 /**
+ * "Honest 404" — for invalid landing-page slugs (whitelist miss).
+ *
+ * Replaces the prior 302→home redirect to avoid Google's soft-404 detection.
+ * Soft 404 = a page returns 200 OK but Google decides the content doesn't match
+ * the URL's likely intent → ranks the URL near zero AND can erode trust signals
+ * for the entire path family. A genuine 404 with noindex is cleaner.
+ *
+ * Includes helpful navigation so users (or bots following bad links) can
+ * recover to a real page.
+ */
+function renderHonest404(req, res, badUrl) {
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Page Not Found — YouthHire</title>
+<meta name="description" content="The page you requested doesn't exist. Browse current youth job openings on YouthHire.">
+<link rel="canonical" href="${BASE}/">
+<link rel="alternate" hreflang="en-CA" href="${BASE}/">
+<link rel="alternate" hreflang="x-default" href="${BASE}/">
+<meta name="robots" content="noindex, follow">
+<style>
+body{font-family:system-ui,sans-serif;max-width:640px;margin:80px auto;padding:0 20px;color:#0F0F0F;line-height:1.6;text-align:center}
+h1{color:#2563EB;font-size:32px;margin-bottom:8px}
+.lede{color:#5A5A5A;margin-bottom:32px}
+.cta{display:inline-block;background:#2563EB;color:#fff;padding:14px 28px;border-radius:10px;text-decoration:none;font-weight:700;margin:8px}
+.cta-alt{display:inline-block;background:#fff;color:#2563EB;border:1px solid #2563EB;padding:14px 28px;border-radius:10px;text-decoration:none;font-weight:700;margin:8px}
+a{color:#2563EB}
+</style>
+</head>
+<body>
+<h1>Page not found</h1>
+<p class="lede">The page <code>${esc(badUrl || '')}</code> doesn't exist or has been removed.</p>
+<a href="${BASE}/" class="cta">Browse all jobs</a>
+<a href="${BASE}/locations" class="cta-alt">Browse by city</a>
+<p style="margin-top:32px;font-size:13px;color:#919191">If you arrived here from a link on YouthHire, please <a href="${BASE}/contact">let us know</a>.</p>
+</body>
+</html>`;
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
+  res.setHeader('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=60');
+  return res.status(404).send(html);
+}
+
+/**
  * Empty listing → 404 with noindex (don't pollute the index with empty pages
  * that may briefly exist after a job is removed).
  */
@@ -931,6 +1033,9 @@ function renderEmptyListing(type, slug, res) {
 <head>
 <meta charset="UTF-8">
 <title>Not Found — YouthHire</title>
+<link rel="canonical" href="${BASE}/">
+<link rel="alternate" hreflang="en-CA" href="${BASE}/">
+<link rel="alternate" hreflang="x-default" href="${BASE}/">
 <meta name="robots" content="noindex, follow">
 <style>body{font-family:system-ui,sans-serif;max-width:600px;margin:80px auto;padding:0 20px;text-align:center;color:#0F0F0F}a{color:#2563EB}</style>
 </head>
