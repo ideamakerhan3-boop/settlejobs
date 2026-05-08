@@ -974,6 +974,9 @@ async function dbSaveJob(job) {
   };
   var r = await _apiCall('/api/auth-api', {action:'create_job', email:auth.email, pw_hash:auth.pw_hash, job:payload});
   if(r && r.error) throw new Error('dbSaveJob failed: ' + r.error);
+  // Analytics: post-job conversion. Tag category + employment type so
+  // we can see which markets generate the most postings.
+  try{ _track('post_job_complete', {category: payload.category||null, type: payload.type||null, prov: payload.prov||null}); }catch(e){}
 }
 async function dbGetJobs(email) {
   var auth=_getAuthForCredits();
@@ -1748,6 +1751,10 @@ async function openJob(id) {
   var j=null;
   for(var i=0;i<ALL_JOBS.length;i++){if(String(ALL_JOBS[i].id)===String(id)){j=ALL_JOBS[i];break;}}
   if(!j) return;
+  // Analytics: job detail view. Captured client-side because the SPA opens
+  // job detail without a real navigation. Server-side /jobs/:id is bot-only
+  // (humans get a 302 to SPA), so this is the only signal of human views.
+  try{ _track('job_view', {job_id:String(id), category:j.cat||null, prov:j.prov||null}); }catch(e){}
   if(j.src==='jobbank' && j.url){window.open(j.url,'_blank','noopener');return;}
   // Public list omits apply_email to block bulk harvesting; fetch on click.
   if(j._needsDetail){ try { await hydrateJobDetail(j); } catch(e) {} }
@@ -1808,7 +1815,7 @@ async function openJob(id) {
     h+='<div class="detail-card" style="border:2px solid var(--border)">';
     h+='<h3 style="margin-bottom:12px">How to Apply</h3>';
     h+='<p style="font-size:13.5px;color:var(--gray);line-height:1.7;margin-bottom:14px">Click below to apply on the employer\'s website.</p>';
-    h+='<a href="'+safeUrl(j.applyUrl)+'" target="_blank" rel="noopener" class="btn btn-primary" style="display:block;text-align:center;text-decoration:none">🔗 Apply Now ↗</a>';
+    h+='<a href="'+safeUrl(j.applyUrl)+'" target="_blank" rel="noopener" class="btn btn-primary" style="display:block;text-align:center;text-decoration:none" onclick="try{_track(\'job_apply_click\',{job_id:String('+JSON.stringify(j.id||j.job_id||'')+'),method:\'url\'});}catch(e){}">🔗 Apply Now ↗</a>';
     h+='</div>';
   } else if(isActive && j.email){
     h+='<div class="detail-card" style="border:2px solid var(--border)">';
@@ -1818,7 +1825,7 @@ async function openJob(id) {
     h+='<span style="font-size:13.5px;font-weight:700;color:var(--ink)">✉ '+j.email+'</span>';
     h+='<button class="btn btn-outline btn-sm" style="flex-shrink:0;font-size:12px" data-email="'+j.email+'" onclick="copyEmail(this.dataset.email)">Copy</button>';
     h+='</div>';
-    h+='<a href="mailto:'+j.email+'" class="btn btn-primary" style="display:block;text-align:center;text-decoration:none">✉ Send Email</a>';
+    h+='<a href="mailto:'+j.email+'" class="btn btn-primary" style="display:block;text-align:center;text-decoration:none" onclick="try{_track(\'job_apply_click\',{job_id:String('+JSON.stringify(j.id||j.job_id||'')+'),method:\'email\'});}catch(e){}">✉ Send Email</a>';
     h+='</div>';
   } else if(isActive){
     h+='<div class="detail-card" style="border:2px solid var(--border);text-align:center;padding:24px">';
@@ -2028,6 +2035,11 @@ function _doRegisterFinish(em, pw, name, co, ds, promoCode) {
     localStorage.setItem('cjb_company', co);
   }catch(e){}
 
+  // Analytics: signup conversion event (after auth success, before any
+  // navigation). Captures whether a promo code was applied — useful for
+  // measuring partner-channel performance.
+  try{ _track('signup_complete', {has_promo: !!promoCode}); }catch(e){}
+
   // 가입 보너스: signup_bonus API로 5크레딧 지급 (서버에서 크레딧+트랜잭션 모두 처리).
   // Optimistic UI matches the server's 5-credit grant so the nav doesn't show
   // "1 credit available" for a beat before the server response lands.
@@ -2110,6 +2122,9 @@ function doLogin() {
     var acct = _ACCOUNTS[em];
     _isLoggedIn = true;
     var isAdmin = !!acct.is_admin;
+    // Analytics: login conversion. Tag admin separately so admin sessions
+    // can be filtered out of public engagement reports.
+    try{ _track('login', {is_admin: isAdmin}); }catch(e){}
     try{
       localStorage.setItem('cjb_logged_in','1');
       localStorage.setItem('cjb_email', em);
@@ -2301,6 +2316,18 @@ async function saveAlertPrefs() {
     var saved = document.getElementById('alerts-saved-banner');
     if(saved) saved.style.display = 'block';
     showToast('✓ Preferences saved.','success');
+    // Analytics: alert subscription state change. Tag opt-in + filters set
+    // so we can measure which combinations actually convert to engagement.
+    try{
+      _track(optIn ? 'alert_optin' : 'alert_save', {
+        opt_in:    optIn,
+        prov:      prov || null,
+        category:  cat  || null,
+        has_loc:   !!loc,
+        remote_ok: !!remote,
+        frequency: freq
+      });
+    }catch(e){}
   } catch(e){
     console.error('saveAlertPrefs error:', e);
     if(btn){ btn.disabled=false; btn.textContent='Save Preferences'; }
