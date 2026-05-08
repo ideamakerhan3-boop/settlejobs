@@ -1005,9 +1005,39 @@ async function dbUpdateIssueStatus(id, status) {
   await _apiCall('/api/admin-api', {action:'update_issue_job_status', email:auth.email, pw_hash:auth.pw_hash, id:String(id), status:status});
 }
 // ── Admin API helpers (require is_admin account) ──
+//
+// Stale-session UX fix: when sessionStorage is wiped (new tab / browser
+// restart) `_ACCOUNTS` rebuilds empty, so `_getAuthForCredits()` returns
+// `{email, pw_hash:null}`. Previously we returned `{error:'not authenticated'}`
+// silently, the caller did `(r&&r.accounts)||[]` and rendered an EMPTY admin
+// panel with no feedback — looks like data is missing. Now we surface it
+// with a toast + redirect home, debounced via `_staleSessionHandled` so
+// rapid-fire admin tab loads don't pile up redirects.
+//
+// Anonymous-caller safety: this file is `admin.html` (separate document
+// from the public SPA), so every caller of `_adminApi` is already on the
+// admin page → already a logged-in admin context. The TIJ regression
+// (lessons/INDEX line 55) doesn't apply here — no anonymous callers exist.
+var _staleSessionHandled = false;
+function _handleStaleSession() {
+  if(_staleSessionHandled) return;
+  _staleSessionHandled = true;
+  // Clear partial state so the redirect lands on a clean login screen
+  try { localStorage.removeItem('cjb_logged_in'); } catch(e){}
+  // Surface to the user
+  if(typeof showToast === 'function') {
+    showToast('Your session expired. Redirecting to sign in…','warn');
+  }
+  // Redirect to /login (SPA page-login section). 1.2s delay lets the toast
+  // surface before navigation tears down the page.
+  setTimeout(function(){ window.location.href = '/login'; }, 1200);
+}
 async function _adminApi(body) {
   var auth=_getAuthForCredits();
-  if(!auth.email || !auth.pw_hash) return {error:'not authenticated'};
+  if(!auth.email || !auth.pw_hash) {
+    _handleStaleSession();
+    return {error:'not authenticated'};
+  }
   body.email = auth.email;
   body.pw_hash = auth.pw_hash;
   return await _apiCall('/api/admin-api', body);
