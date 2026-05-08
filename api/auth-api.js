@@ -313,6 +313,73 @@ export default async function handler(req, res) {
       return res.status(200).json({ ok: true, email: acct.email });
     }
 
+    // ──────────────── TRACK_EVENT (anonymous accepted) ────────────────
+    // Self-hosted analytics. No auth required (page views from logged-out
+    // visitors). Strict whitelist of event types + length caps prevent abuse.
+    // Rate-limited per IP to deter flood bombing the events table.
+    if (action === 'track_event') {
+      const ALLOWED_TYPES = new Set([
+        'pageview', 'job_view', 'job_apply_click', 'signup_start',
+        'signup_complete', 'login', 'post_job_start', 'post_job_complete',
+        'alert_optin', 'alert_save', 'unsubscribe', 'feed_click',
+        'social_share', 'cta_click'
+      ]);
+      const t = String(body.event_type || '').slice(0, 40);
+      if (!ALLOWED_TYPES.has(t)) {
+        // Silent no-op for unknown types — don't 400 to keep client tracker
+        // resilient if ALLOWED_TYPES is updated server-side first.
+        return res.status(200).json({ ok: true, ignored: true });
+      }
+      // Rate limit per IP — 100 events / 5min, generous enough for any real
+      // user but blocks bots from filling the table.
+      if (!(await rateLimit(sb, 'evt:' + ip, 100, 300_000))) {
+        return res.status(200).json({ ok: true, throttled: true });
+      }
+      const cap = (s, n) => (s ? String(s).slice(0, n) : null);
+      try {
+        await sb.from('events').insert({
+          event_type:    t,
+          page:          cap(body.page, 200),
+          session_id:    cap(body.session_id, 32),
+          email:         body.email ? String(body.email).toLowerCase().slice(0, 254) : null,
+          referrer_host: cap(body.referrer_host, 80),
+          utm_source:    cap(body.utm_source, 60),
+          utm_medium:    cap(body.utm_medium, 60),
+          utm_campaign:  cap(body.utm_campaign, 80),
+          meta:          (body.meta && typeof body.meta === 'object') ? body.meta : {}
+        });
+      } catch (e) {
+        // Never surface insert errors — analytics must never break the app
+        console.warn('track_event insert failed (non-critical):', e.message);
+      }
+      return res.status(200).json({ ok: true });
+    }
+
+    // ──────────────── LOG_ERROR (anonymous accepted) ────────────────
+    // Client-side window.onerror / unhandledrejection capture. Truncates
+    // payloads to prevent log-bomb attacks. Same per-IP rate limit as events.
+    if (action === 'log_error') {
+      if (!(await rateLimit(sb, 'err:' + ip, 50, 300_000))) {
+        return res.status(200).json({ ok: true, throttled: true });
+      }
+      const cap = (s, n) => (s ? String(s).slice(0, n) : null);
+      try {
+        await sb.from('error_logs').insert({
+          message:    cap(body.message, 500) || 'unknown',
+          source:     cap(body.source, 300),
+          line_no:    typeof body.line_no === 'number' ? body.line_no : null,
+          col_no:     typeof body.col_no === 'number' ? body.col_no : null,
+          stack:      cap(body.stack, 2000),
+          page:       cap(body.page, 200),
+          user_agent: cap(body.user_agent, 300),
+          email:      body.email ? String(body.email).toLowerCase().slice(0, 254) : null,
+        });
+      } catch (e) {
+        console.warn('log_error insert failed (non-critical):', e.message);
+      }
+      return res.status(200).json({ ok: true });
+    }
+
     // ──────────────── UNSUBSCRIBE (token-based, no auth needed) ────────────────
     // Unsub URL format: /unsubscribe?t=<unsub_token>
     // Token is per-account, stable across sessions, generated at registration
