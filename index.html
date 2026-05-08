@@ -658,6 +658,100 @@ if(window.location.search.indexOf('checkout=success')>=0){
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <script>
 
+// ── Self-hosted analytics + error logging (privacy-friendly, no cookies) ──
+//
+// One small in-memory session_id (rotates per tab open, never persisted).
+// pageview fires on first paint; named events fire from explicit hooks like
+// `_track('signup_complete')`. Sends are fire-and-forget — analytics must
+// never block the app or surface errors. Server-side allow-listed event
+// types + per-IP rate limit keep the DB clean.
+var _SESSION_ID = (function(){
+  try{
+    var s = sessionStorage.getItem('cjb_sess');
+    if(s && /^[a-f0-9]{16}$/.test(s)) return s;
+  }catch(e){}
+  var b = new Uint8Array(8); (window.crypto||window.msCrypto).getRandomValues(b);
+  var hex = Array.from(b).map(function(x){return ('0'+x.toString(16)).slice(-2);}).join('');
+  try{ sessionStorage.setItem('cjb_sess', hex); }catch(e){}
+  return hex;
+})();
+function _track(eventType, meta){
+  try{
+    var em = ''; try{ em = (localStorage.getItem('cjb_email')||'').toLowerCase(); }catch(e){}
+    var qs = new URLSearchParams(window.location.search);
+    var ref = '';
+    try{ if(document.referrer){ ref = (new URL(document.referrer)).hostname; } }catch(e){}
+    var body = {
+      action:        'track_event',
+      event_type:    eventType,
+      page:          window.location.pathname + (qs.has('openJob') ? '?openJob=…' : ''),
+      session_id:    _SESSION_ID,
+      email:         em || null,
+      referrer_host: ref || null,
+      utm_source:    qs.get('utm_source') || null,
+      utm_medium:    qs.get('utm_medium') || null,
+      utm_campaign:  qs.get('utm_campaign') || null,
+      meta:          (meta && typeof meta === 'object') ? meta : {}
+    };
+    // Fire-and-forget. No await, no error surfacing.
+    fetch('/api/auth-api', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(body),
+      keepalive: true
+    }).catch(function(){});
+  }catch(e){ /* analytics never breaks the app */ }
+}
+// Global error capture — pings server-side error_logs table. Truncated to
+// prevent log bombs. Throttled by server-side per-IP rate limit.
+window.addEventListener('error', function(ev){
+  try{
+    var em = ''; try{ em = (localStorage.getItem('cjb_email')||'').toLowerCase(); }catch(e){}
+    fetch('/api/auth-api', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        action:     'log_error',
+        message:    String((ev && ev.message) || 'unknown').slice(0, 500),
+        source:     ev && ev.filename ? String(ev.filename).slice(0, 300) : null,
+        line_no:    ev && typeof ev.lineno === 'number' ? ev.lineno : null,
+        col_no:     ev && typeof ev.colno === 'number' ? ev.colno : null,
+        stack:      ev && ev.error && ev.error.stack ? String(ev.error.stack).slice(0, 2000) : null,
+        page:       window.location.pathname,
+        user_agent: String(navigator.userAgent || '').slice(0, 300),
+        email:      em || null,
+      }),
+      keepalive: true
+    }).catch(function(){});
+  }catch(e){}
+});
+window.addEventListener('unhandledrejection', function(ev){
+  try{
+    var em = ''; try{ em = (localStorage.getItem('cjb_email')||'').toLowerCase(); }catch(e){}
+    var reason = ev && ev.reason;
+    fetch('/api/auth-api', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        action:     'log_error',
+        message:    String((reason && reason.message) || reason || 'unhandled rejection').slice(0, 500),
+        stack:      reason && reason.stack ? String(reason.stack).slice(0, 2000) : null,
+        page:       window.location.pathname,
+        user_agent: String(navigator.userAgent || '').slice(0, 300),
+        email:      em || null,
+      }),
+      keepalive: true
+    }).catch(function(){});
+  }catch(e){}
+});
+// Fire pageview on first paint (slight defer so `requestIdleCallback` doesn't
+// compete with critical render path)
+(function(){
+  var fire = function(){ _track('pageview'); };
+  if(window.requestIdleCallback){ requestIdleCallback(fire, {timeout: 2000}); }
+  else { setTimeout(fire, 800); }
+})();
+
 // ── Supabase 초기화 ──
 var SUPABASE_URL = 'https://xouvuqqkbtaikrnnueda.supabase.co';
 var SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhvdXZ1cXFrYnRhaWtybm51ZWRhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUyNDk4NDgsImV4cCI6MjA5MDgyNTg0OH0.pHbWMMttRwzltgY4paQ6gfQNnTkqR4gkDF3N2kAgOyA';

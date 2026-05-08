@@ -28,6 +28,7 @@
     { "source": "/employers", "destination": "/api/job-page?type=employer" },
     { "source": "/employers/:slug", "destination": "/api/job-page?type=employer&slug=:slug" },
     { "source": "/about-youth-employment", "destination": "/api/job-page?type=trust" },
+    { "source": "/status", "destination": "/api/job-page?type=status" },
     { "source": "/jobs-in-:province", "destination": "/api/job-page?type=province&slug=:province" },
     { "source": "/:category-jobs", "destination": "/api/job-page?type=category&slug=:category" }
   ],
