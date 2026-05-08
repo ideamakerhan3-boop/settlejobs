@@ -527,6 +527,65 @@ export default async function handler(req, res) {
       return res.status(200).json({ total: data?.total || 0, used: data?.used || 0 });
     }
 
+    // ──────────────── SAVED_JOBS (auth required) ────────────────
+    // Per-account bookmarks. UNIQUE(email,job_id) constraint makes save_job
+    // idempotent — re-saving the same job is a silent no-op (insert-or-ignore).
+    // No employer-vs-seeker distinction at the DB level; the UI decides who
+    // sees the bookmark UI.
+    if (action === 'save_job') {
+      const job_id = String(body.job_id || '').trim();
+      if (!job_id || !/^[0-9a-z_\-]+$/i.test(job_id)) return res.status(400).json({ error: 'invalid job_id' });
+      // Confirm the job exists + is active before saving (don't let users
+      // bookmark closed/expired jobs)
+      const { data: job } = await sb.from('jobs').select('job_id, status').eq('job_id', job_id).maybeSingle();
+      if (!job || job.status !== 'active') return res.status(404).json({ error: 'Job not found or no longer active' });
+      try {
+        await sb.from('saved_jobs').insert({ email: em, job_id });
+      } catch (e) {
+        // UNIQUE violation = already saved. Ignore — idempotent.
+        if (!String(e.message || '').includes('duplicate key')) {
+          console.error('save_job error:', e.message);
+          return res.status(500).json({ error: 'Could not save' });
+        }
+      }
+      return res.status(200).json({ ok: true });
+    }
+
+    if (action === 'unsave_job') {
+      const job_id = String(body.job_id || '').trim();
+      if (!job_id) return res.status(400).json({ error: 'job_id required' });
+      const { error } = await sb.from('saved_jobs').delete().eq('email', em).eq('job_id', job_id);
+      if (error) return res.status(500).json({ error: 'Could not unsave' });
+      return res.status(200).json({ ok: true });
+    }
+
+    if (action === 'list_saved_jobs') {
+      // Join with jobs to return current title/company/etc — saved bookmarks
+      // surface even if the underlying job changes status, with a flag so the
+      // UI can grey out non-active ones.
+      const { data: rows } = await sb.from('saved_jobs')
+        .select('job_id, saved_at')
+        .eq('email', em)
+        .order('saved_at', { ascending: false })
+        .limit(200);
+
+      const ids = (rows || []).map(r => r.job_id);
+      if (ids.length === 0) return res.status(200).json({ saved_jobs: [] });
+
+      const { data: jobs } = await sb.from('jobs')
+        .select('job_id, title, company, loc, prov, type, wage, category, remote, status, exp_date')
+        .in('job_id', ids);
+
+      const byId = new Map((jobs || []).map(j => [j.job_id, j]));
+      const enriched = (rows || []).map(r => ({
+        saved_at: r.saved_at,
+        job_id:   r.job_id,
+        job:      byId.get(r.job_id) || null,
+        is_active: byId.get(r.job_id)?.status === 'active'
+      }));
+      return res.status(200).json({ saved_jobs: enriched });
+    }
+
     // ──────────────── UPDATE_MARKETING_OPTIN (logged-in user toggles) ────────────────
     // Used by settings page to flip marketing_opt_in. Records timestamp on opt-in
     // (CASL: must record consent date). Opt-out clears last_alert_sent_at so the

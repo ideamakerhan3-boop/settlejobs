@@ -54,6 +54,7 @@ export default async function handler(req, res) {
     { loc: '/employers', changefreq: 'daily', priority: '0.7' },
     { loc: '/about-youth-employment', changefreq: 'monthly', priority: '0.6' },
     { loc: '/status', changefreq: 'daily', priority: '0.3' },
+    { loc: '/api', changefreq: 'monthly', priority: '0.5' },
   ];
 
   // Active jobs from DB — single fetch reused for /jobs/, /locations/, /employers/

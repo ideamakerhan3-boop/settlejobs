@@ -100,6 +100,9 @@ export default async function handler(req, res) {
   if (type === 'status') {
     return renderStatusPage(req, res);
   }
+  if (type === 'apidocs') {
+    return renderApiDocsPage(req, res);
+  }
   if (type === 'province' && slug) {
     const meta = PROVINCE_SLUGS[String(slug).toLowerCase()];
     if (!meta) return renderHonest404(req, res, BASE + '/jobs-in-' + slug);
@@ -981,6 +984,202 @@ ${crossLinks}
 
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
   res.setHeader('Cache-Control', 'public, s-maxage=600, stale-while-revalidate=120');
+  return res.status(200).send(html);
+}
+
+/**
+ * Public REST API documentation page at /api.
+ *
+ * Server-rendered HTML with APIDocumentation JSON-LD so search engines and
+ * AI assistants can surface the endpoints. Indexable. Targets developers /
+ * partners (university career portals, aggregator integrators) who want to
+ * pull our active jobs into their own systems.
+ */
+function renderApiDocsPage(req, res) {
+  const url = BASE + '/api';
+  const pageTitle = "Public API — YouthHire";
+  const pageDesc = "Free public REST API for partners. Pull YouthHire's active youth jobs into your career portal, aggregator, or community newsletter. JSON, no auth required.";
+
+  const apiDocLd = JSON.stringify({
+    "@context": "https://schema.org",
+    "@type": "APIReference",
+    "@id": url,
+    "name": pageTitle,
+    "description": pageDesc,
+    "url": url,
+    "isPartOf": { "@type": "WebSite", "@id": BASE + "/#website", "url": BASE, "name": "YouthHire" },
+    "audience": { "@type": "Audience", "audienceType": "Developers, partner integrators" },
+    "documentation": url,
+  }).replace(/<\//g, '<\\/');
+
+  const breadcrumbLd = JSON.stringify({
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      { "@type": "ListItem", "position": 1, "name": "Home", "item": BASE },
+      { "@type": "ListItem", "position": 2, "name": "API", "item": url }
+    ]
+  }).replace(/<\//g, '<\\/');
+
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${esc(pageTitle)}</title>
+<meta name="description" content="${esc(pageDesc)}">
+<link rel="canonical" href="${url}">
+<link rel="alternate" hreflang="en-CA" href="${url}">
+<link rel="alternate" hreflang="x-default" href="${url}">
+<meta name="robots" content="index, follow">
+<meta property="og:type" content="website">
+<meta property="og:title" content="${esc(pageTitle)}">
+<meta property="og:description" content="${esc(pageDesc)}">
+<meta property="og:url" content="${url}">
+<meta property="og:site_name" content="YouthHire">
+<script type="application/ld+json">${apiDocLd}</script>
+<script type="application/ld+json">${breadcrumbLd}</script>
+<style>
+body{font-family:system-ui,sans-serif;max-width:880px;margin:40px auto;padding:0 20px;color:#0F0F0F;line-height:1.7}
+h1{color:#2563EB;font-size:32px;margin-bottom:8px;letter-spacing:-.02em}
+h2{font-size:21px;margin:36px 0 12px;letter-spacing:-.01em}
+h3{font-size:16px;margin:18px 0 8px}
+.lede{color:#5A5A5A;font-size:17px;margin-bottom:36px;line-height:1.6}
+nav{margin-bottom:32px;font-size:14px}
+.endpoint{padding:18px 20px;border:1px solid #E2E2DC;border-radius:12px;margin:14px 0;background:#FAFAF7}
+.method{display:inline-block;padding:3px 10px;border-radius:6px;font-weight:700;font-size:12px;letter-spacing:.5px;background:#10B981;color:#fff;margin-right:8px}
+.path{font-family:'JetBrains Mono',Menlo,monospace;font-size:14px;font-weight:700;color:#0F0F0F}
+pre{background:#0F0F0F;color:#E5E7EB;padding:14px 16px;border-radius:10px;overflow-x:auto;font-family:'JetBrains Mono',Menlo,monospace;font-size:12.5px;line-height:1.55;margin:10px 0}
+code{font-family:'JetBrains Mono',Menlo,monospace;font-size:13px;background:#F3F4F6;padding:1px 6px;border-radius:4px}
+table{border-collapse:collapse;width:100%;margin:8px 0;font-size:13.5px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid #E2E2DC;vertical-align:top}
+th{background:#FAFAF7;font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:.4px;color:#5A5A5A}
+.footer{margin-top:48px;padding-top:24px;border-top:1px solid #E2E2DC;font-size:13px;color:#919191}
+a{color:#2563EB}
+.note{padding:12px 16px;background:#EFF6FF;border-left:3px solid #2563EB;border-radius:6px;font-size:13.5px;color:#1E3A8A;margin:12px 0}
+</style>
+</head>
+<body>
+<nav>
+<a href="${BASE}" style="font-weight:800;font-size:20px;color:#2563EB">YouthHire</a>
+<span style="color:#919191;margin:0 8px">›</span>
+<span>API</span>
+</nav>
+
+<h1>YouthHire Public API</h1>
+<p class="lede">Pull our active youth jobs into your university career portal, partner site, or community newsletter. JSON over HTTPS, no authentication required, CORS open. Versioned under <code>/api/v1/</code>.</p>
+
+<div class="note"><strong>Free for non-commercial use.</strong> If you're integrating into a commercial product or expect &gt; 1,000 requests / day, please email <a href="${BASE}/contact">our team</a> first.</div>
+
+<h2>Base URL</h2>
+<pre>${BASE}/api/v1</pre>
+
+<h2>Endpoints</h2>
+
+<div class="endpoint">
+  <span class="method">GET</span><span class="path">/api/v1/jobs</span>
+  <p style="margin:8px 0 0;color:#5A5A5A">List active job postings. Returns up to 200 per request.</p>
+  <h3>Query parameters</h3>
+  <table>
+    <tr><th>Param</th><th>Type</th><th>Description</th></tr>
+    <tr><td><code>limit</code></td><td>integer</td><td>1–200, default 100</td></tr>
+    <tr><td><code>offset</code></td><td>integer</td><td>≥0, default 0</td></tr>
+    <tr><td><code>prov</code></td><td>string</td><td>2-letter province code (e.g. <code>BC</code>, <code>ON</code>)</td></tr>
+    <tr><td><code>category</code></td><td>string</td><td>Exact category name (e.g. <code>Hospitality &amp; Tourism</code>)</td></tr>
+    <tr><td><code>employment_type</code></td><td>string</td><td><code>Full-Time</code> | <code>Part-Time</code> | <code>Contract</code> | <code>Seasonal</code> | <code>Casual</code></td></tr>
+    <tr><td><code>remote</code></td><td>boolean</td><td><code>true</code> or <code>1</code> to include only remote roles</td></tr>
+    <tr><td><code>since</code></td><td>ISO date</td><td>e.g. <code>2026-04-01</code> — only jobs created on/after</td></tr>
+    <tr><td><code>q</code></td><td>string</td><td>Keyword match against title and description (max 80 chars)</td></tr>
+  </table>
+  <h3>Example</h3>
+  <pre>curl '${BASE}/api/v1/jobs?prov=BC&amp;category=Retail&amp;limit=10'</pre>
+  <h3>Response</h3>
+  <pre>{
+  "api_version": "v1",
+  "count": 10,
+  "offset": 0,
+  "limit": 10,
+  "jobs": [
+    {
+      "job_id": "1777847314418",
+      "title": "Kitchen Helper",
+      "company": "Sushi Langford",
+      "loc": "Langford, BC",
+      "prov": "BC",
+      "type": "Full-Time",
+      "category": "Food Services",
+      "wage": "$18-22/hr",
+      "remote": "onsite",
+      "lang": "English",
+      "edu": "None",
+      "exp_req": "No experience",
+      "description": "...",
+      "requirements": "...",
+      "benefits": "...",
+      "posted_date": "2026-05-03",
+      "exp_date": "2026-07-02",
+      "apply_method": "email",
+      "apply_url": null
+    }
+  ]
+}</pre>
+</div>
+
+<div class="endpoint">
+  <span class="method">GET</span><span class="path">/api/v1/jobs/{job_id}</span>
+  <p style="margin:8px 0 0;color:#5A5A5A">Single active job by id. Returns 404 if not active or doesn't exist.</p>
+  <h3>Example</h3>
+  <pre>curl '${BASE}/api/v1/jobs/1777847314418'</pre>
+</div>
+
+<div class="endpoint">
+  <span class="method">GET</span><span class="path">/api/v1/stats</span>
+  <p style="margin:8px 0 0;color:#5A5A5A">Aggregate platform stats. Cached for 5 minutes server-side.</p>
+  <h3>Example</h3>
+  <pre>curl '${BASE}/api/v1/stats'</pre>
+  <h3>Response</h3>
+  <pre>{
+  "active_jobs": 6,
+  "employers": 4,
+  "cities": 4,
+  "provinces": 1,
+  "postings_30d": 8,
+  "as_of": "2026-05-08T00:00:00.000Z"
+}</pre>
+</div>
+
+<h2>Other distribution channels</h2>
+<p>If you don't want to write code:</p>
+<ul>
+<li><strong>RSS 2.0 feed</strong> — <a href="${BASE}/feed.xml">${BASE}/feed.xml</a> — submit to Indeed, Jooble, Adzuna, CareerJet, Talent.com aggregator programs (free in most cases).</li>
+<li><strong>Sitemap</strong> — <a href="${BASE}/sitemap.xml">${BASE}/sitemap.xml</a> — for SEO indexing.</li>
+</ul>
+
+<h2>Rate limits</h2>
+<table>
+  <tr><th>Endpoint</th><th>Limit (per IP)</th></tr>
+  <tr><td><code>/api/v1/jobs</code> (list)</td><td>30 / 10 minutes</td></tr>
+  <tr><td><code>/api/v1/jobs/{id}</code></td><td>30 / 10 minutes</td></tr>
+  <tr><td><code>/api/v1/stats</code></td><td>60 / 10 minutes</td></tr>
+</table>
+<p>Over-limit responses return HTTP 429. Recover with exponential backoff. If you need higher limits for a legitimate integration, email <a href="${BASE}/contact">our team</a>.</p>
+
+<h2>Stability and versioning</h2>
+<p><code>/api/v1/</code> is the stable contract — fields will only be added, not removed or renamed, within this version. Breaking changes ship under <code>/api/v2/</code> with a 6-month overlap.</p>
+<p>The <code>api_version</code> field on list responses lets you detect the active version client-side.</p>
+
+<h2>Compliance</h2>
+<p>YouthHire complies with Canadian Anti-Spam Legislation (CASL) and PIPEDA. See <a href="${BASE}/about-youth-employment">our compliance pledges</a> for details on how we vet employers and handle data. Partner integrations should respect the same standards when republishing jobs.</p>
+
+<div class="footer">
+<p><strong>YouthHire</strong> — Canada's youth job board. Connecting students, new grads, and young workers with employers hiring for entry-level, part-time, and first-job opportunities.</p>
+<p style="margin-top:8px"><a href="${BASE}/about">About</a> · <a href="${BASE}/about-youth-employment">Compliance</a> · <a href="${BASE}/status">Status</a> · <a href="${BASE}/contact">Contact</a> · <a href="${BASE}/privacy">Privacy</a> · <a href="${BASE}/terms">Terms</a></p>
+</div>
+
+</body>
+</html>`;
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
+  res.setHeader('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=600');
   return res.status(200).send(html);
 }
 

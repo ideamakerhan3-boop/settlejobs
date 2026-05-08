@@ -4688,6 +4688,30 @@ function _initApp() {
   var sb = document.getElementById('home-stats-bar');
   if(sb){ try{ var active=ALL_JOBS.filter(function(j){return j.status==='active';}).length; sb.textContent=active+' jobs available across Canada'; }catch(e){} }
 
+  // Live stats hero card — fetch from /api/list-jobs?type=stats. DB-truth
+  // counts are more accurate than ALL_JOBS (which mixes in jobbank). Cached
+  // 5min server-side so this is cheap. Fail silently if endpoint unreachable.
+  (function loadHomeStats(){
+    try{
+      fetch('/api/list-jobs?type=stats', {headers:{'Accept':'application/json'}})
+        .then(function(r){ return r && r.ok ? r.json() : null; })
+        .then(function(s){
+          if(!s) return;
+          var card = document.getElementById('home-stats-card');
+          var hj = document.getElementById('hsc-jobs');
+          var he = document.getElementById('hsc-employers');
+          var hc = document.getElementById('hsc-cities');
+          var hp = document.getElementById('hsc-provinces');
+          if(hj) hj.textContent = String(s.active_jobs || 0);
+          if(he) he.textContent = String(s.employers || 0);
+          if(hc) hc.textContent = String(s.cities || 0);
+          if(hp) hp.textContent = String(s.provinces || 0);
+          if(card && (s.active_jobs > 0)) card.style.display = 'inline-block';
+        })
+        .catch(function(){});
+    }catch(e){}
+  })();
+
   // URL 기반 라우팅: /jobs/:id, ?openJob=id, /about 등
   try {
     var _path = window.location.pathname;
@@ -4831,6 +4855,17 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
       </div>
 
       <span id="home-stats-bar" style="display:none"></span>
+
+      <!-- Live stats hero card — fetched from /api/list-jobs?type=stats on home load -->
+      <div id="home-stats-card" style="display:none;margin-top:18px;padding:14px 18px;background:rgba(255,255,255,.92);border:1px solid #E2E2DC;border-radius:14px;font-size:13.5px;color:#0F0F0F;backdrop-filter:blur(6px)">
+        <span id="hsc-jobs" style="font-weight:800">—</span> <span style="color:#5A5A5A">active jobs</span>
+        <span style="color:#919191;margin:0 10px">·</span>
+        <span id="hsc-employers" style="font-weight:800">—</span> <span style="color:#5A5A5A">employers</span>
+        <span style="color:#919191;margin:0 10px">·</span>
+        <span id="hsc-cities" style="font-weight:800">—</span> <span style="color:#5A5A5A">cities</span>
+        <span style="color:#919191;margin:0 10px">·</span>
+        <span id="hsc-provinces" style="font-weight:800">—</span> <span style="color:#5A5A5A">provinces</span>
+      </div>
     </div>
   </section>
 
