@@ -1273,6 +1273,11 @@ function go(p, skipHistory) {
     // Billing 데이터 미리 로드
     try { renderBillingFromDB(); } catch(e){}
   }
+  if (p==='alerts') {
+    // Job alert preferences page — auth required (uses get_alert_prefs)
+    if(!_isLoggedIn){ requireLogin('alerts'); return; }
+    loadAlertPrefs();
+  }
   if (p==='post-job') {
     if(!_isLoggedIn){ requireLogin('post-job'); return; }
     // 드래프트 편집 중이 아닐 때만 폼 초기화
@@ -2105,6 +2110,107 @@ async function doRequestReset() {
     console.error('request_reset error:', e);
     if(btn){ btn.disabled=false; btn.textContent='Send Reset Link'; }
     showToast('❌ Network error. Please try again.','error');
+  }
+}
+
+// ────────────────────────────────────────────────────────────
+//  Job Alert Preferences (/alerts page) — CASL-gated digest opt-in
+// ────────────────────────────────────────────────────────────
+async function loadAlertPrefs() {
+  // Show loading state, hide form
+  var loading = document.getElementById('alerts-loading');
+  var form    = document.getElementById('alerts-form');
+  var saved   = document.getElementById('alerts-saved-banner');
+  if(loading) loading.style.display = 'block';
+  if(form)    form.style.display    = 'none';
+  if(saved)   saved.style.display   = 'none';
+
+  var em = '', pwHash = '';
+  try {
+    em     = (localStorage.getItem('cjb_email')||'').toLowerCase();
+    pwHash = (sessionStorage.getItem('cjb_pwh')||'') || ((_ACCOUNTS[em]||{}).pw||'');
+  } catch(e){}
+  if(!em || !pwHash) {
+    showToast('Please sign in to manage job alerts.','warn');
+    requireLogin('alerts');
+    return;
+  }
+
+  try {
+    var r = await _apiCall('/api/auth-api', {action:'get_alert_prefs', email:em, pw_hash:pwHash});
+    if(!r || r.error) {
+      if(loading) loading.textContent = 'Could not load preferences. Please try again.';
+      return;
+    }
+    var prefs = r.alert_prefs || {};
+    // Populate form
+    var optEl  = document.getElementById('alerts-optin');
+    var provEl = document.getElementById('alerts-prov');
+    var catEl  = document.getElementById('alerts-cat');
+    var locEl  = document.getElementById('alerts-loc');
+    var remEl  = document.getElementById('alerts-remote');
+    if(optEl)  optEl.checked  = !!r.marketing_opt_in;
+    if(provEl) provEl.value   = prefs.prov || '';
+    if(catEl)  catEl.value    = prefs.category || '';
+    if(locEl)  locEl.value    = prefs.loc || '';
+    if(remEl)  remEl.checked  = !!prefs.remote_ok;
+    // Frequency radio
+    var freq = prefs.frequency === 'weekly' ? 'weekly' : 'daily';
+    var freqEls = document.getElementsByName('alerts-freq');
+    for(var i=0; i<freqEls.length; i++){ freqEls[i].checked = (freqEls[i].value === freq); }
+
+    if(loading) loading.style.display = 'none';
+    if(form)    form.style.display    = 'block';
+  } catch(e){
+    console.error('loadAlertPrefs error:', e);
+    if(loading) loading.textContent = 'Network error. Please try again.';
+  }
+}
+
+async function saveAlertPrefs() {
+  var em = '', pwHash = '';
+  try {
+    em     = (localStorage.getItem('cjb_email')||'').toLowerCase();
+    pwHash = (sessionStorage.getItem('cjb_pwh')||'') || ((_ACCOUNTS[em]||{}).pw||'');
+  } catch(e){}
+  if(!em || !pwHash){ showToast('Please sign in.','warn'); return; }
+
+  var btn = document.getElementById('alerts-save-btn');
+  if(btn){ btn.disabled = true; btn.textContent = 'Saving…'; }
+
+  // Read form
+  var optIn = (document.getElementById('alerts-optin')||{}).checked || false;
+  var prov  = ((document.getElementById('alerts-prov')||{}).value || '').trim();
+  var cat   = ((document.getElementById('alerts-cat')||{}).value || '').trim();
+  var loc   = ((document.getElementById('alerts-loc')||{}).value || '').trim().substring(0,100);
+  var remote = (document.getElementById('alerts-remote')||{}).checked || false;
+  var freq = 'daily';
+  var freqEls = document.getElementsByName('alerts-freq');
+  for(var i=0; i<freqEls.length; i++){ if(freqEls[i].checked) freq = freqEls[i].value; }
+
+  try {
+    // Step 1: opt-in flag (required for any send)
+    var optResp = await _apiCall('/api/auth-api', {action:'update_marketing_optin', email:em, pw_hash:pwHash, opt_in: optIn});
+    if(!optResp || optResp.error) throw new Error((optResp && optResp.error) || 'opt-in update failed');
+
+    // Step 2: alert prefs
+    var prefs = {};
+    if(prov) prefs.prov = prov;
+    if(cat)  prefs.category = cat;
+    if(loc)  prefs.loc = loc;
+    if(remote) prefs.remote_ok = true;
+    prefs.frequency = freq;
+    var prefsResp = await _apiCall('/api/auth-api', {action:'update_alert_prefs', email:em, pw_hash:pwHash, alert_prefs: prefs});
+    if(!prefsResp || prefsResp.error) throw new Error((prefsResp && prefsResp.error) || 'prefs update failed');
+
+    if(btn){ btn.disabled=false; btn.textContent='Save Preferences'; }
+    var saved = document.getElementById('alerts-saved-banner');
+    if(saved) saved.style.display = 'block';
+    showToast('✓ Preferences saved.','success');
+  } catch(e){
+    console.error('saveAlertPrefs error:', e);
+    if(btn){ btn.disabled=false; btn.textContent='Save Preferences'; }
+    showToast('❌ ' + (e.message || 'Save failed. Please try again.'),'error');
   }
 }
 
@@ -4871,6 +4977,103 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 </div>
 
 <!-- ══════════════════════════════════════════════════ -->
+<!--  JOB ALERT PREFERENCES (/alerts)                  -->
+<!-- ══════════════════════════════════════════════════ -->
+<div id="page-alerts" class="page">
+  <div class="form-page">
+    <button class="back-btn" onclick="go('dashboard')">← Back to Dashboard</button>
+    <div class="form-header">
+      <h1>Job Alert Settings</h1>
+      <p>Get an email when new youth jobs match your filters. Unsubscribe anytime.</p>
+    </div>
+
+    <div id="alerts-loading" style="text-align:center;padding:40px;color:var(--muted)">Loading your preferences…</div>
+
+    <div id="alerts-form" style="display:none">
+
+      <!-- Marketing opt-in toggle (CASL — must be explicit) -->
+      <div style="background:#FAFAF7;border:1px solid #E2E2DC;border-radius:12px;padding:16px 18px;margin-bottom:24px">
+        <label class="legal-check" style="margin:0">
+          <input type="checkbox" id="alerts-optin">
+          <span><strong>Send me job alert emails</strong> when new jobs match my filters below. (Required to enable alerts.)</span>
+        </label>
+        <div style="font-size:12.5px;color:var(--muted);margin-top:8px;line-height:1.5">By turning this on, you consent to occasional marketing emails from YouthHire under CASL. You can unsubscribe with one click in any email or by turning this off.</div>
+      </div>
+
+      <!-- Province filter -->
+      <div class="fg">
+        <label for="alerts-prov">Province / Territory <span style="color:var(--muted);font-weight:400;font-size:13px">(optional — leave blank to match any)</span></label>
+        <select class="fc" id="alerts-prov">
+          <option value="">Any province</option>
+          <option value="AB">Alberta</option>
+          <option value="BC">British Columbia</option>
+          <option value="MB">Manitoba</option>
+          <option value="NB">New Brunswick</option>
+          <option value="NL">Newfoundland and Labrador</option>
+          <option value="NS">Nova Scotia</option>
+          <option value="NT">Northwest Territories</option>
+          <option value="NU">Nunavut</option>
+          <option value="ON">Ontario</option>
+          <option value="PE">Prince Edward Island</option>
+          <option value="QC">Quebec</option>
+          <option value="SK">Saskatchewan</option>
+          <option value="YT">Yukon</option>
+        </select>
+      </div>
+
+      <!-- Category filter -->
+      <div class="fg">
+        <label for="alerts-cat">Category <span style="color:var(--muted);font-weight:400;font-size:13px">(optional)</span></label>
+        <select class="fc" id="alerts-cat">
+          <option value="">Any category</option>
+          <option value="Hospitality &amp; Tourism">🏨 Hospitality &amp; Tourism</option>
+          <option value="Food Services">🍳 Food Services</option>
+          <option value="Construction">🔨 Construction</option>
+          <option value="Health Care">🏥 Health Care</option>
+          <option value="Retail">🛍 Retail</option>
+          <option value="Transportation &amp; Logistics">🚚 Transportation &amp; Logistics</option>
+          <option value="General Labour">📦 General Labour</option>
+          <option value="Child Care">👶 Child Care</option>
+          <option value="Manufacturing">🏭 Manufacturing</option>
+          <option value="Technology">💻 Technology</option>
+          <option value="Education">📚 Education</option>
+          <option value="Agriculture">🌾 Agriculture</option>
+        </select>
+      </div>
+
+      <!-- City contains -->
+      <div class="fg">
+        <label for="alerts-loc">City contains <span style="color:var(--muted);font-weight:400;font-size:13px">(optional)</span></label>
+        <input class="fc" type="text" id="alerts-loc" placeholder="e.g., Vancouver" maxlength="100">
+        <div style="font-size:12.5px;color:var(--muted);margin-top:5px">Partial match — "vancouver" finds Vancouver, North Vancouver, etc.</div>
+      </div>
+
+      <!-- Remote OK -->
+      <div class="fg">
+        <label class="legal-check" style="margin:0">
+          <input type="checkbox" id="alerts-remote">
+          <span>Include remote jobs from anywhere in Canada</span>
+        </label>
+      </div>
+
+      <!-- Frequency -->
+      <div class="fg">
+        <label>Frequency</label>
+        <div style="display:flex;gap:16px;margin-top:6px">
+          <label class="legal-check" style="margin:0;flex:1"><input type="radio" name="alerts-freq" value="daily" checked><span>Daily digest <span style="color:var(--muted);font-size:13px">(at most once a day)</span></span></label>
+          <label class="legal-check" style="margin:0;flex:1"><input type="radio" name="alerts-freq" value="weekly"><span>Weekly digest <span style="color:var(--muted);font-size:13px">(once a week)</span></span></label>
+        </div>
+      </div>
+
+      <button class="btn btn-primary btn-full btn-lg" id="alerts-save-btn" onclick="saveAlertPrefs()" style="margin-top:24px">Save Preferences</button>
+
+      <div id="alerts-saved-banner" style="display:none;background:#ECFDF5;border:1.5px solid #A7F3D0;border-radius:12px;padding:14px 18px;margin-top:16px;color:#065F46;font-weight:600;text-align:center">✓ Preferences saved. You'll receive your first matching digest in the next sweep.</div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════ -->
 <!--  POST JOB FORM                                    -->
 <!-- ══════════════════════════════════════════════════ -->
 <div id="page-post-job" class="page">
@@ -5462,6 +5665,11 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
             <div class="fg"><label>New Password</label><input class="fc" type="password" id="acc-new-pw" placeholder="Min. 8 characters" oninput="checkPwStr(this.value)"></div>
             <div class="fg"><label>Confirm New Password</label><input class="fc" type="password" id="acc-new-pw2" placeholder="Repeat new password"></div>
             <button class="btn btn-outline btn-sm" onclick="saveAccSettings()">Update Password</button>
+          </div>
+          <div class="post-section">
+            <div class="post-section-head">Email Preferences</div>
+            <p style="font-size:13px;color:var(--gray);margin-bottom:10px;line-height:1.6">Get an email digest when new youth jobs match your filters. Set the location, category, and frequency that work for you.</p>
+            <button class="btn btn-outline btn-sm" onclick="go('alerts')">Manage Job Alerts →</button>
           </div>
           <div class="post-section">
             <div class="post-section-head">Promo / Partner Code</div>
