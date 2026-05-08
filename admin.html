@@ -4340,6 +4340,8 @@ function renderAdminJobs() {
       else if(j.status==='active') h+='<button class="abtn abtn-r" style="font-size:10px;padding:4px 6px" onclick="adminConfirmClose('+jidStr+')">⛔</button>';
       else h+='<button class="abtn abtn-g" style="font-size:10px;padding:4px 6px" onclick="adminReopenJob('+jidStr+')">🔄</button>';
     }
+    // Active local jobs only — generates ready-to-paste social posts
+    if(!isJB && j.status==='active') h+='<button class="abtn abtn-b" style="font-size:10px;padding:4px 6px" onclick="adminGenSocial('+jidStr+')" title="Generate social posts">📱</button>';
     if(!isJB) h+='<button class="abtn abtn-w" style="font-size:10px;padding:4px 6px" onclick="adminConfirmDelete('+jidStr+','+(isDeleted?'true':'false')+')">'+( isDeleted?'🗑✓':'🗑')+'</button>';
     h+='</div></td></tr>';
   });
@@ -5493,6 +5495,44 @@ function adminViewJob(id) {
   if(reopenBtn) reopenBtn.onclick = function(){ adminReopenJob(id); closeAdminJobModal(); };
   if(delBtn) delBtn.onclick = function(){ if(confirm('Permanently delete this job posting? This cannot be undone.')){ adminDeleteJob(id); closeAdminJobModal(); } };
   modal.classList.add('open');
+}
+
+// Generate ready-to-paste social posts for a job. Pops a modal with one
+// textarea per platform — owner copies and pastes into their socials.
+// We do NOT auto-post (no platform credentials, safety rules).
+async function adminGenSocial(id) {
+  var r = await _adminApi({action:'social_content', job_id: String(id)});
+  if(!r || r.error){ showToast('❌ ' + (r && r.error || 'Could not generate'),'error'); return; }
+  var s = r.social || {};
+  // Build modal
+  var existing = document.getElementById('admin-social-modal');
+  if(existing) existing.remove();
+  var overlay = document.createElement('div');
+  overlay.id = 'admin-social-modal';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
+  overlay.onclick = function(e){ if(e.target===overlay) overlay.remove(); };
+
+  function box(label, body, meta) {
+    return '<div style="margin-bottom:16px"><div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px"><label style="font-weight:700;font-size:13px">'+label+'</label>'+(meta?'<span style="font-size:11px;color:rgba(255,255,255,.5)">'+meta+'</span>':'')+'</div>'+
+      '<textarea readonly style="width:100%;min-height:90px;background:#0F0F0F;color:#E5E7EB;border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:10px 12px;font-family:Menlo,monospace;font-size:12.5px;line-height:1.5;resize:vertical">'+body.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</textarea>'+
+      '<button onclick="this.previousElementSibling.select();document.execCommand(\'copy\');this.textContent=\'✓ Copied\';setTimeout(function(){var b=document.querySelector(\'#admin-social-modal button.copybtn-\'+this.dataset.k);if(b)b.textContent=\'Copy\';}.bind(this),1500)" class="copybtn-'+label.toLowerCase().replace(/[^a-z]/g,'')+'" data-k="'+label.toLowerCase().replace(/[^a-z]/g,'')+'" style="background:#2563EB;color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:11px;font-weight:700;cursor:pointer;margin-top:6px">Copy</button>'+
+      '</div>';
+  }
+
+  var html = '<div style="background:#1F2937;color:#F3F4F6;border-radius:14px;padding:24px;max-width:680px;width:100%;max-height:85vh;overflow-y:auto;font-family:system-ui,sans-serif">'+
+    '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:18px">'+
+    '<div><h3 style="margin:0 0 6px;font-size:16px">📱 Social posts for: '+r.title+'</h3>'+
+    '<div style="font-size:12px;color:rgba(255,255,255,.5)">'+r.company+' · '+r.url+'</div></div>'+
+    '<button onclick="document.getElementById(\'admin-social-modal\').remove()" style="background:transparent;color:#fff;border:1px solid rgba(255,255,255,.2);border-radius:6px;padding:4px 10px;cursor:pointer;font-size:14px">✕</button>'+
+    '</div>'+
+    box('Twitter / X',  s.twitter.text,  s.twitter.char_count + ' / ' + s.twitter.char_limit + ' chars · ' + s.twitter.handle) +
+    box('LinkedIn',     s.linkedin.text, s.linkedin.char_count + ' chars' + (s.linkedin.page_url ? ' · '+s.linkedin.page_url : '')) +
+    box('Reddit',       s.reddit.text,   'Subreddit: ' + s.reddit.subreddit_suggestion) +
+    box('Facebook',     s.facebook.text, s.facebook.char_count + ' chars') +
+    '<div style="margin-top:14px;padding:10px 14px;background:rgba(96,165,250,.1);border-left:3px solid #60A5FA;border-radius:6px;font-size:12px;line-height:1.55;color:#BFDBFE">⚠️ Read each platform\'s rules before posting. Reddit moderators ban direct hiring posts in many subreddits — flair as [Hiring] and check sub rules first.</div>'+
+    '</div>';
+  overlay.innerHTML = html;
+  document.body.appendChild(overlay);
 }
 
 function adminViewJobHistory(id) {
