@@ -197,6 +197,110 @@ export default async function handler(req, res) {
       return res.status(200).json({ ok: true });
     }
 
+    // ──────────────── SOCIAL CONTENT GENERATOR (admin only) ────────────────
+    // Returns ready-to-paste social posts for a given job. The owner copies
+    // them into their (manually-managed) Twitter/LinkedIn/Reddit/Facebook
+    // accounts. Per anthropic safety rules, we do NOT auto-post — that
+    // requires platform credentials we don't have and may never have.
+    //
+    // Each format is hand-tuned for its platform:
+    //   - twitter: 280 char cap, hashtag, emoji
+    //   - linkedin: long-form, professional tone, 1300 char target
+    //   - reddit: title + body, subreddit suggestion
+    //   - facebook: casual, emoji, longer
+    if (action === 'social_content') {
+      const job_id = String(body.job_id || '').trim();
+      if (!job_id) return res.status(400).json({ error: 'job_id required' });
+      const { data: job } = await sb.from('jobs')
+        .select('job_id, title, company, loc, prov, type, wage, category, remote, description, status')
+        .eq('job_id', job_id).maybeSingle();
+      if (!job) return res.status(404).json({ error: 'Job not found' });
+
+      const BASE = 'https://www.canadayouthhire.ca';
+      const url = `${BASE}/jobs/${job.job_id}`;
+      const where = job.loc ? `${job.loc}${job.prov && !job.loc.endsWith(job.prov) ? ', ' + job.prov : ''}` : (job.prov || 'Canada');
+      const remote = job.remote && /remote/i.test(job.remote);
+      const wage = job.wage ? ` · ${job.wage}` : '';
+      const tw_handle  = process.env.BRAND_TWITTER  ? '@' + process.env.BRAND_TWITTER : '@YouthHire';
+      const ig_handle  = process.env.BRAND_INSTAGRAM ? '@' + process.env.BRAND_INSTAGRAM : '';
+      const linkedin_pg = process.env.BRAND_LINKEDIN || '';
+
+      // Twitter / X — 280 char hard cap
+      const twTags = [
+        '#YouthJobs', '#CanadaJobs',
+        job.prov ? '#' + job.prov + 'Jobs' : '',
+        remote ? '#RemoteJobs' : ''
+      ].filter(Boolean).join(' ');
+      let twitter = `🍁 ${job.title} at ${job.company}\n📍 ${where}${remote ? ' (Remote)' : ''}${wage}\n\n${url}\n\n${twTags}`;
+      if (twitter.length > 280) {
+        // Truncate title if needed
+        const baseLen = twitter.length - job.title.length;
+        const room = 280 - baseLen - 1;
+        if (room > 10) {
+          twitter = twitter.replace(job.title, job.title.substring(0, room) + '…');
+        } else {
+          twitter = `🍁 ${job.title.substring(0, 60)}\n${url}\n${twTags}`.substring(0, 280);
+        }
+      }
+
+      // LinkedIn — long-form, professional
+      const linkedin = `🇨🇦 New youth job opening in ${where}.\n\n` +
+        `**${job.title}** — ${job.company}\n` +
+        `${job.type ? '• ' + job.type + '\n' : ''}` +
+        `${job.wage ? '• Compensation: ' + job.wage + '\n' : ''}` +
+        `${job.category ? '• Field: ' + job.category + '\n' : ''}` +
+        `${remote ? '• Remote-friendly\n' : ''}` +
+        `\nWho is this for? Students, new grads, and young workers in Canada looking for entry-level or part-time work.\n\n` +
+        `${(job.description || '').replace(/<[^>]+>/g,'').substring(0, 600)}${(job.description || '').length > 600 ? '…' : ''}\n\n` +
+        `Apply or learn more on YouthHire (free job board for Canadian youth):\n${url}\n\n` +
+        `#YouthEmployment #CanadaJobs ${job.prov ? '#' + job.prov : ''} #FirstJob #StudentJobs`;
+
+      // Reddit — title + body, with subreddit suggestion
+      const reddit_subreddit = job.prov === 'BC' ? 'r/vancouver or r/britishcolumbia'
+                              : job.prov === 'ON' ? 'r/toronto or r/ontario'
+                              : job.prov === 'AB' ? 'r/calgary or r/alberta'
+                              : job.prov === 'QC' ? 'r/montreal or r/quebec'
+                              : 'r/canada or r/jobs';
+      const reddit_title = `[Hiring] ${job.title} - ${job.company} (${where})${wage}`;
+      const reddit_body = `Hi ${reddit_subreddit.split(' ')[0]},\n\n` +
+        `${job.company} is hiring a ${job.title} in ${where}.${remote ? ' This role is remote-friendly.' : ''}\n\n` +
+        `**Quick details:**\n` +
+        `${job.type ? '- Type: ' + job.type + '\n' : ''}` +
+        `${job.wage ? '- Compensation: ' + job.wage + '\n' : ''}` +
+        `${job.category ? '- Field: ' + job.category + '\n' : ''}` +
+        `${job.exp_req && job.exp_req !== 'No experience' ? '- Experience: ' + job.exp_req + '\n' : '- Open to no-experience candidates\n'}` +
+        `\nFull posting: ${url}\n\n` +
+        `_(Posted on YouthHire — a free job board for Canadian students, new grads, and young workers. Mods, please remove if not allowed.)_`;
+      const reddit = `**Subreddit suggestion:** ${reddit_subreddit}\n` +
+        `**Read each subreddit's rules first** — many ban direct hiring posts and require flair.\n\n` +
+        `**Title:**\n${reddit_title}\n\n` +
+        `**Body:**\n${reddit_body}`;
+
+      // Facebook — casual, emoji-heavy
+      const facebook = `🌟 We've got a fresh youth job up on YouthHire!\n\n` +
+        `📌 ${job.title}\n` +
+        `🏢 ${job.company}\n` +
+        `📍 ${where}${remote ? ' (Remote)' : ''}\n` +
+        `${job.wage ? '💰 ' + job.wage + '\n' : ''}` +
+        `${job.type ? '⏰ ' + job.type + '\n' : ''}` +
+        `\nPerfect if you're a student, new grad, or just starting your career in Canada. ` +
+        `Tag a friend who's job hunting! 👇\n\n` +
+        `Apply here: ${url}`;
+
+      return res.status(200).json({
+        job_id:   job.job_id,
+        title:    job.title,
+        company:  job.company,
+        url,
+        social: {
+          twitter:  { text: twitter,  char_count: twitter.length, char_limit: 280, handle: tw_handle },
+          linkedin: { text: linkedin, char_count: linkedin.length, char_limit: 3000, page_url: linkedin_pg },
+          reddit:   { text: reddit,   subreddit_suggestion: reddit_subreddit },
+          facebook: { text: facebook, char_count: facebook.length },
+        }
+      });
+    }
+
     return res.status(400).json({ error: 'Unknown action: ' + action });
 
   } catch (err) {
