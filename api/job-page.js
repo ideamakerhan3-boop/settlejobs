@@ -94,6 +94,9 @@ export default async function handler(req, res) {
       ? renderListingPage('employer', String(slug), req, res)
       : renderIndexPage('employer', req, res);
   }
+  if (type === 'trust') {
+    return renderTrustPage(req, res);
+  }
   if (type === 'province' && slug) {
     const meta = PROVINCE_SLUGS[String(slug).toLowerCase()];
     if (!meta) return renderHonest404(req, res, BASE + '/jobs-in-' + slug);
@@ -975,6 +978,200 @@ ${crossLinks}
 
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
   res.setHeader('Cache-Control', 'public, s-maxage=600, stale-while-revalidate=120');
+  return res.status(200).send(html);
+}
+
+/**
+ * Server-rendered trust signal page at /about-youth-employment.
+ *
+ * Builds E-E-A-T (Experience / Expertise / Authoritativeness / Trustworthiness)
+ * signals for Google by explicitly stating compliance posture, vetting practices,
+ * and resources. AboutPage JSON-LD with the org as `mainEntity`. Bot-and-human
+ * shared HTML (no UA branching) — we want users reading this too.
+ */
+function renderTrustPage(req, res) {
+  const url = BASE + '/about-youth-employment';
+  const pageTitle = "About Youth Employment in Canada — YouthHire";
+  const pageDesc = "How YouthHire vets youth-friendly employers, complies with CASL/PIPEDA/CHRA, and helps Canadian students, new grads, and young workers land their first job safely.";
+
+  const aboutLd = JSON.stringify({
+    "@context": "https://schema.org",
+    "@type": "AboutPage",
+    "@id": url,
+    "url": url,
+    "name": pageTitle,
+    "description": pageDesc,
+    "isPartOf": { "@type": "WebSite", "@id": BASE + "/#website", "url": BASE, "name": "YouthHire" },
+    "mainEntity": {
+      "@type": "Organization",
+      "@id": ORG_ID,
+      "name": "YouthHire",
+      "url": BASE,
+      "areaServed": { "@type": "Country", "name": "Canada" },
+      "knowsAbout": [
+        "Youth Employment",
+        "Student Jobs",
+        "Entry-Level Jobs",
+        "Part-Time Work",
+        "First Job",
+        "Canadian Anti-Spam Legislation (CASL)",
+        "Personal Information Protection and Electronic Documents Act (PIPEDA)",
+        "Canadian Human Rights Act"
+      ],
+      "memberOf": {
+        "@type": "Country",
+        "name": "Canada"
+      }
+    }
+  }).replace(/<\//g, '<\\/');
+
+  const breadcrumbLd = JSON.stringify({
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      { "@type": "ListItem", "position": 1, "name": "Home", "item": BASE },
+      { "@type": "ListItem", "position": 2, "name": "About Youth Employment", "item": url }
+    ]
+  }).replace(/<\//g, '<\\/');
+
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${esc(pageTitle)}</title>
+<meta name="description" content="${esc(pageDesc)}">
+<link rel="canonical" href="${url}">
+<link rel="alternate" hreflang="en-CA" href="${url}">
+<link rel="alternate" hreflang="x-default" href="${url}">
+<meta name="robots" content="index, follow">
+<meta property="og:type" content="website">
+<meta property="og:title" content="${esc(pageTitle)}">
+<meta property="og:description" content="${esc(pageDesc)}">
+<meta property="og:url" content="${url}">
+<meta property="og:site_name" content="YouthHire">
+<meta property="og:locale" content="en_CA">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="${esc(pageTitle)}">
+<meta name="twitter:description" content="${esc(pageDesc)}">
+<script type="application/ld+json">${aboutLd}</script>
+<script type="application/ld+json">${breadcrumbLd}</script>
+<style>
+body{font-family:system-ui,sans-serif;max-width:780px;margin:40px auto;padding:0 20px;color:#0F0F0F;line-height:1.7}
+h1{color:#2563EB;font-size:32px;margin-bottom:8px;letter-spacing:-.02em}
+.lede{color:#5A5A5A;font-size:17px;margin-bottom:36px;line-height:1.6}
+h2{font-size:21px;margin:36px 0 12px;letter-spacing:-.01em}
+h3{font-size:16px;margin:20px 0 8px;color:#0F0F0F}
+nav{margin-bottom:32px;font-size:14px}
+.pledge-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin:20px 0}
+.pledge{padding:16px 18px;border:1px solid #E2E2DC;border-radius:12px;background:#FAFAF7}
+.pledge-title{font-weight:700;font-size:14px;margin-bottom:6px;color:#0F0F0F}
+.pledge-body{font-size:13.5px;color:#5A5A5A;line-height:1.55}
+.cta{display:inline-block;background:#2563EB;color:#fff;padding:14px 28px;border-radius:10px;text-decoration:none;font-weight:700;margin:24px 0 8px}
+.cta-alt{display:inline-block;color:#2563EB;padding:14px 0;text-decoration:none;font-weight:700;margin-left:16px}
+.footer{margin-top:56px;padding-top:24px;border-top:1px solid #E2E2DC;font-size:13px;color:#919191}
+ul{padding-left:22px;margin:8px 0}
+li{margin:4px 0}
+a{color:#2563EB}
+.compliance-seal{display:inline-block;background:#ECFDF5;border:1px solid #A7F3D0;color:#065F46;padding:4px 10px;border-radius:99px;font-size:12px;font-weight:700;margin:0 6px 6px 0}
+</style>
+</head>
+<body>
+<nav>
+<a href="${BASE}" style="font-weight:800;font-size:20px;color:#2563EB">YouthHire</a>
+<span style="color:#919191;margin:0 8px">›</span>
+<span>About Youth Employment</span>
+</nav>
+
+<h1>About youth employment in Canada</h1>
+<p class="lede">YouthHire is built specifically for Canadian students, new graduates, and young workers landing their first jobs. Here's how we keep the experience safe, fair, and useful — and the laws that govern what we do.</p>
+
+<span class="compliance-seal">🇨🇦 Canadian Human Rights Act</span>
+<span class="compliance-seal">📋 CASL-compliant email</span>
+<span class="compliance-seal">🔒 PIPEDA privacy</span>
+<span class="compliance-seal">⚖️ Provincial Employment Standards</span>
+
+<h2>Our compliance pledges</h2>
+<div class="pledge-grid">
+
+<div class="pledge">
+<div class="pledge-title">No discrimination</div>
+<div class="pledge-body">Job postings on YouthHire must comply with the <strong>Canadian Human Rights Act</strong> and provincial human rights codes. Employers who post discriminatory listings (race, religion, sex, age, disability, etc.) are removed and barred from re-posting.</div>
+</div>
+
+<div class="pledge">
+<div class="pledge-title">CASL-compliant email</div>
+<div class="pledge-body">We follow Canada's Anti-Spam Legislation: explicit opt-in, identified sender, physical postal address in every marketing email, and a one-click unsubscribe link that works for at least 60 days. Transactional emails (welcome, password reset, posting expiry) are exempt under CRTC guidance.</div>
+</div>
+
+<div class="pledge">
+<div class="pledge-title">PIPEDA-aligned privacy</div>
+<div class="pledge-body">Your personal information (name, email, account password) is stored on Canadian servers and shared with employers <em>only</em> when you choose to apply to a specific posting. We never sell user data. Account deletion is available on request.</div>
+</div>
+
+<div class="pledge">
+<div class="pledge-title">Free for job seekers</div>
+<div class="pledge-body">Searching, browsing, and applying for jobs on YouthHire is — and will remain — free. We never charge applicants. Employers pay per posting; no fee is ever passed on to candidates.</div>
+</div>
+
+<div class="pledge">
+<div class="pledge-title">Provincial wage compliance</div>
+<div class="pledge-body">Every posting must meet or exceed the applicable provincial minimum wage. Postings that don't are flagged and the employer is contacted before publication. Employers must list compensation transparently.</div>
+</div>
+
+<div class="pledge">
+<div class="pledge-title">Youth-appropriate vetting</div>
+<div class="pledge-body">Job categories are restricted to entry-level, part-time, casual, and first-job opportunities. Postings requiring 5+ years of experience or industry-specific senior credentials are removed.</div>
+</div>
+
+</div>
+
+<h2>How we vet employers</h2>
+<p>Before a job appears in our listings:</p>
+<ul>
+<li><strong>Account verification</strong> — every employer signs up with a verified email and a registered company name. Suspicious sign-ups are flagged.</li>
+<li><strong>Posting review</strong> — admins review new postings for human-rights compliance, wage transparency, and youth-appropriateness before they go live to the public listings.</li>
+<li><strong>Continuous monitoring</strong> — postings flagged by community feedback or automated checks are reviewed within one business day.</li>
+<li><strong>Removal policy</strong> — employers found violating these standards have their account suspended and existing postings closed.</li>
+</ul>
+
+<h2>Resources for your first job</h2>
+<p>Starting your career? These Canadian government resources can help:</p>
+<ul>
+<li><a href="https://www.canada.ca/en/services/jobs/opportunities/student.html" rel="noopener">Government of Canada — Jobs for Students</a> — federal student employment program</li>
+<li><a href="https://www.canada.ca/en/employment-social-development/services/sin.html" rel="noopener">Apply for a Social Insurance Number (SIN)</a> — required to start working in Canada</li>
+<li><a href="https://www.canada.ca/en/employment-social-development/services/funding/youth-employment-skills-strategy.html" rel="noopener">Youth Employment and Skills Strategy</a> — federal programs for ages 15–30</li>
+<li><a href="https://www.canada.ca/en/revenue-agency/services/tax/individuals/topics/about-your-tax-return/get-ready-do-your-taxes.html" rel="noopener">CRA — Filing your first tax return</a> — what to do with that first T4</li>
+<li><a href="https://www.chrc-ccdp.gc.ca" rel="noopener">Canadian Human Rights Commission</a> — your rights at work</li>
+</ul>
+
+<h2>Provincial employment standards</h2>
+<p>Each province sets minimum age, hours, and wage rules for young workers. The most up-to-date references:</p>
+<ul>
+<li><a href="https://www.alberta.ca/employment-standards" rel="noopener">Alberta — Employment Standards</a></li>
+<li><a href="https://www2.gov.bc.ca/gov/content/employment-business/employment-standards-advice/employment-standards" rel="noopener">British Columbia — Employment Standards</a></li>
+<li><a href="https://www.ontario.ca/document/your-guide-employment-standards-act-0" rel="noopener">Ontario — Employment Standards Act</a></li>
+<li><a href="https://www.cnesst.gouv.qc.ca/en/working-conditions/labour-standards" rel="noopener">Quebec (CNESST) — Labour Standards</a></li>
+</ul>
+
+<h2>Partner with us</h2>
+<p>We work with Canadian schools, training programs, and youth-serving organizations to surface opportunities for young job seekers. If you'd like to add YouthHire as a resource for your students or members, or syndicate our active listings, email <a href="${BASE}/contact">our team</a>. Our public RSS feed at <code>${BASE}/feed.xml</code> is free for any non-commercial use.</p>
+
+<p>
+<a href="${BASE}/" class="cta">Browse all current jobs →</a>
+<a href="${BASE}/locations" class="cta-alt">Browse by city →</a>
+</p>
+
+<div class="footer">
+<p><strong>YouthHire</strong> — Canada's youth job board. Connecting students, new grads, and young workers with employers hiring for entry-level, part-time, and first-job opportunities.</p>
+<p style="margin-top:8px"><a href="${BASE}/about">About</a> · <a href="${BASE}/contact">Contact</a> · <a href="${BASE}/privacy">Privacy</a> · <a href="${BASE}/terms">Terms</a></p>
+</div>
+
+</body>
+</html>`;
+
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
+  res.setHeader('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=600');
   return res.status(200).send(html);
 }
 

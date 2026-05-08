@@ -6,5 +6,9 @@ Disallow: /admin
 Disallow: /checkout
 Disallow: /post-job
 Disallow: /post-flow
+Disallow: /alerts
+Disallow: /unsubscribe
+Disallow: /forgot
+Disallow: /reset
 
 Sitemap: https://www.canadayouthhire.ca/sitemap.xml
