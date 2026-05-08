@@ -1,0 +1,45 @@
+name: Post-merge prod smoke
+
+# After every push to main, wait for Vercel to roll out, then run the
+# production smoke. CI fails (red X on the commit) if any check fails —
+# the user gets a GitHub notification + commit status without us needing
+# Twilio/Slack secrets here.
+#
+# Manually triggerable via "Run workflow" on the Actions tab too.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Wait for Vercel deploy
+        # Vercel's median deploy is ~30-60s after push; 90s with a
+        # generous buffer covers cold-start + edge propagation. We poll
+        # /sitemap.xml for the new sitemap (fresh deploy invalidates the
+        # edge cache) up to 4 minutes.
+        run: |
+          BASE="https://www.canadayouthhire.ca"
+          for i in $(seq 1 24); do
+            CODE=$(curl -s -o /dev/null -w "%{http_code}" "$BASE/sitemap.xml")
+            if [ "$CODE" = "200" ]; then
+              echo "sitemap.xml ready (attempt $i)"
+              break
+            fi
+            echo "waiting for deploy... ($i/24, status=$CODE)"
+            sleep 10
+          done
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Run smoke
+        run: node scripts/smoke.mjs https://www.canadayouthhire.ca
