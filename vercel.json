@@ -29,6 +29,10 @@
     { "source": "/employers/:slug", "destination": "/api/job-page?type=employer&slug=:slug" },
     { "source": "/about-youth-employment", "destination": "/api/job-page?type=trust" },
     { "source": "/status", "destination": "/api/job-page?type=status" },
+    { "source": "/api", "destination": "/api/job-page?type=apidocs" },
+    { "source": "/api/v1/jobs", "destination": "/api/list-jobs?public=1" },
+    { "source": "/api/v1/jobs/:id", "destination": "/api/list-jobs?public=1&id=:id" },
+    { "source": "/api/v1/stats", "destination": "/api/list-jobs?type=stats&public=1" },
     { "source": "/jobs-in-:province", "destination": "/api/job-page?type=province&slug=:province" },
     { "source": "/:category-jobs", "destination": "/api/job-page?type=category&slug=:category" }
   ],
