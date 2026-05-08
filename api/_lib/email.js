@@ -91,7 +91,22 @@ export async function sendTransactionalEmail({ template_id, template_params }) {
  *   - account.unsub_token missing (no way to honor unsubscribe)
  */
 export async function sendMarketingEmail({ sb, account, template_id, template_params }) {
-  const { buildMarketingFooter } = await import('./marketing-config.js');
+  const { buildMarketingFooter, BRAND } = await import('./marketing-config.js');
+
+  // Sender-config guard: refuse to send marketing if BRAND_FROM_EMAIL is empty.
+  // Without this, EmailJS uses whatever default sender is configured in the
+  // service dashboard — could be a personal Gmail. CASL also requires explicit
+  // sender identification in commercial messages. Fail loud, not silent.
+  if (!BRAND.fromEmail) {
+    console.error('[MARKETING_BLOCKED] BRAND_FROM_EMAIL env var is empty — refusing to send marketing email. Set it on Vercel and redeploy.');
+    return { sent: false, reason: 'sender_not_configured' };
+  }
+  if (!BRAND.postalAddress) {
+    // CASL also requires a physical postal address in marketing emails. Block
+    // sends until configured to avoid a compliance violation on first send.
+    console.error('[MARKETING_BLOCKED] BRAND_POSTAL_ADDR env var is empty — CASL requires a physical address in marketing emails. Set it on Vercel and redeploy.');
+    return { sent: false, reason: 'postal_address_missing' };
+  }
 
   // Hydrate account if only email given
   let acct = account;

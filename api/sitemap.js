@@ -209,8 +209,13 @@ async function renderRssFeed(req, res) {
     try { return new Date(d).toUTCString(); } catch (e) { return new Date().toUTCString(); }
   }
 
+  // UTM tagging on <link> only — guid stays canonical (RFC: guid should be
+  // a stable identifier, not a tracked URL). Aggregators that hyperlink the
+  // <link> element auto-attribute traffic to the feed source.
+  const UTM = '?utm_source=youthhire_feed&utm_medium=rss&utm_campaign=job_listing';
   const items = jobs.map(function(j) {
-    const url = `${base}/jobs/${j.job_id}`;
+    const canonical  = `${base}/jobs/${j.job_id}`;
+    const trackedUrl = canonical + UTM;
     const where = j.loc ? `${j.loc}${j.prov ? ', ' + j.prov : ''}` : (j.prov || 'Canada');
     const remoteTag = j.remote && /remote/i.test(j.remote) ? ' [Remote]' : '';
     const descParts = [
@@ -224,8 +229,8 @@ async function renderRssFeed(req, res) {
     ].filter(function(p) { return p !== null; }).join('\n');
     return `    <item>
       <title>${rssEsc(j.title || 'Untitled')}${j.company ? ' - ' + rssEsc(j.company) : ''}</title>
-      <link>${url}</link>
-      <guid isPermaLink="true">${url}</guid>
+      <link>${trackedUrl}</link>
+      <guid isPermaLink="true">${canonical}</guid>
       <pubDate>${rfc822(j.created_at || j.posted_date || new Date())}</pubDate>
       <category>${rssEsc(j.category || 'Uncategorized')}</category>
       <description><![CDATA[${descParts}]]></description>
