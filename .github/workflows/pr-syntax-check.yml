@@ -1,0 +1,64 @@
+name: PR syntax check
+
+# Runs `node --check` on every JS file in api/ and scripts/ for every PR
+# and every push to main. Fast (< 10s), no external deps. Catches the kind
+# of runtime parse error that would otherwise blow up only when the handler
+# is invoked in production.
+#
+# Motivating incident: PR #54 (2026-05-10) shipped a JSDoc comment with a
+# literal `*/` sequence inside it (`button_*/to_*`), which closed the block
+# comment early. esbuild still bundled the file, but the first runtime call
+# to sendTransactionalEmail threw `SyntaxError: Unexpected token ')'`. The
+# auth-api outer try/catch swallowed it and returned ok:true — so every
+# password reset and welcome email silently failed for ~30 minutes until we
+# diagnosed it via a temporary debug action. `node --check` would have
+# caught it locally, but we didn't have CI enforcement. Now we do.
+#
+# Block comment is paired with .github/workflows/post-merge-smoke.yml which
+# tests behavior after deploy. This file tests syntax before merge.
+
+on:
+  pull_request:
+    paths:
+      - 'api/**/*.js'
+      - 'scripts/**/*.mjs'
+      - 'scripts/**/*.js'
+  push:
+    branches: [main]
+    paths:
+      - 'api/**/*.js'
+      - 'scripts/**/*.mjs'
+      - 'scripts/**/*.js'
+
+jobs:
+  syntax:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Check all api/ and scripts/ files
+        run: |
+          set -e
+          FAILED=0
+          # Find every .js / .mjs under api/ and scripts/
+          for f in $(find api scripts -type f \( -name '*.js' -o -name '*.mjs' \) 2>/dev/null); do
+            if node --check "$f" 2>/tmp/err; then
+              echo "  ✓ $f"
+            else
+              echo "  ✗ $f"
+              cat /tmp/err
+              FAILED=1
+            fi
+          done
+          if [ "$FAILED" = "1" ]; then
+            echo ""
+            echo "::error::One or more files failed node --check. See output above."
+            echo "Common cause: literal '*/' sequence inside a JSDoc block comment closes the comment prematurely. Don't use 'foo_*/bar_*' patterns in comments."
+            exit 1
+          fi
