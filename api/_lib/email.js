@@ -1,3 +1,24 @@
+// ╔══════════════════════════════════════════════════════════════════════╗
+// ║  ⚠️  WORKING TRANSACTIONAL EMAIL PATH — DO NOT REMOVE WITHOUT THESE   ║
+// ║      THREE STEPS, IN ORDER. PR #51 (2026-05-10) ripped this out      ║
+// ║      before replacement env vars were set → 30 min of zero email     ║
+// ║      sends across the platform. PR #52 reverted.                     ║
+// ║                                                                      ║
+// ║  Before replacing this code path with another provider (Resend,      ║
+// ║  Mailgun, IONOS SMTP, etc.):                                         ║
+// ║    1. Confirm new provider's env vars (API key + From email) are     ║
+// ║       set on Vercel production. Check via Vercel REST API, not       ║
+// ║       memory — memory may be stale.                                  ║
+// ║    2. Send one test email via the new provider and confirm it        ║
+// ║       arrives in an inbox AND that From is the brand domain.         ║
+// ║    3. Use a feature flag (process.env.EMAIL_PROVIDER) to keep the    ║
+// ║       old path callable as a fallback for at least a few days.       ║
+// ║       Never delete this path in the same PR as the new path lands.   ║
+// ║                                                                      ║
+// ║  See memory/lesson_youthhire_data_safety_patterns.md §6 for full     ║
+// ║  rationale.                                                          ║
+// ╚══════════════════════════════════════════════════════════════════════╝
+//
 // Server-side transactional email via the EmailJS REST API.
 // Caller passes { template_params }; the helper supplies service/user/access creds
 // from env vars (EMAILJS_SERVICE_ID, EMAILJS_PUBLIC_KEY, EMAILJS_PRIVATE_KEY).
@@ -5,6 +26,17 @@
 // EMAILJS_SERVICE_ID must match an active service in the configured EmailJS
 // account (currently `service_pbhgrg2` per project_youthhire_emailjs.md).
 // Wrong service id surfaces as "[EMAILJS_FAIL] body=The service ID not found".
+//
+// FROM-ADDRESS NOTE: EmailJS Gmail-type services ALWAYS use the connected
+// Gmail OAuth account's primary email as the From header. The configured
+// service `service_pbhgrg2` is currently bound to a personal Gmail account
+// (operator's `ideamakerhan4@gmail.com` per 2026-05-10 observation), so all
+// transactional mail goes out from that address regardless of any
+// "Send mail as" alias set up in Gmail. To change this you must either:
+//   (a) reconnect the EmailJS service to a different Gmail account in the
+//       EmailJS dashboard, or
+//   (b) migrate to a provider that supports verified-domain DKIM (Resend,
+//       Mailgun, etc.) — follow the 3-step checklist above.
 //
 // Returns true on success, false on any failure (network, EmailJS error, missing
 // config). Failures are logged but never thrown — callers can decide whether a
