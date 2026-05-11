@@ -160,28 +160,6 @@ export default async function handler(req, res) {
         // call recovers. Don't block register.
       }
 
-      // Send welcome email server-side via Resend. Migrated from client-side
-      // EmailJS (browser SDK) so the From header is the verified brand domain
-      // (info@canadayouthhire.ca) instead of an operator's personal Gmail.
-      // Failure is non-fatal — registration still succeeds.
-      try {
-        const { sendTransactionalEmail } = await import('./_lib/email.js');
-        await sendTransactionalEmail({
-          template_id: 'welcome',
-          template_params: {
-            to_email:    em,
-            to_name:     name || em,
-            subject:     'Welcome to Canada Youth Hire, ' + (name || em) + '!',
-            heading:     'Welcome to Canada Youth Hire!',
-            message:     'Your account for ' + (company || 'your company') + ' has been created successfully. ' + (signupTotal > 0 ? signupTotal + ' free job posting credit(s) have been added to your account. ' : '') + 'You can now post jobs and connect with young job seekers across Canada.',
-            button_text: 'Go to Dashboard',
-            button_url:  'https://www.canadayouthhire.ca/dashboard',
-          },
-        });
-      } catch (e) {
-        console.error('register: welcome email send failed for', em, e.message);
-      }
-
       return res.status(200).json({
         ok: true, email: em, name: name || '', company: company || '', is_admin: false,
         credits: { total: signupTotal, used: signupUsed }
