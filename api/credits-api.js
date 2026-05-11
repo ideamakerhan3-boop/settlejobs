@@ -257,10 +257,11 @@ export default async function handler(req, res) {
       // line 1896) and leaked the operator's personal Gmail as the From. Now it
       // sends from info@canadayouthhire.ca with full brand DKIM. Non-fatal on
       // failure — credits are already granted, so the user still has them.
+      // Reuses `acct` already fetched at the handler-level auth check (line 79)
+      // so we don't issue a redundant SELECT.
       try {
-        const { data: acct } = await sb.from('accounts').select('name, company').eq('email', em).maybeSingle();
-        const toName = acct?.name || acct?.company || em;
-        const companyLine = acct?.company ? ' for ' + acct.company : '';
+        const toName = acct.name || acct.company || em;
+        const companyLine = acct.company ? ' for ' + acct.company : '';
         const { sendTransactionalEmail } = await import('./_lib/email.js');
         await sendTransactionalEmail({
           template_id: 'promo_credits_added',
