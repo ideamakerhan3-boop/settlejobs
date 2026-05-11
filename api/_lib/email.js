@@ -182,9 +182,10 @@ function renderTemplate(p) {
  *   - account       Either { email } (we'll look up the rest) OR a full row
  *                   with { email, marketing_opt_in, unsub_token, name }
  *   - template_id   Semantic label only (e.g. 'jobAlert') — used for logs.
- *   - template_params Standard shape (subject/heading/message/button_*/to_*);
- *                   we'll inject CASL footer into `message` and ensure
- *                   to_email/to_name are set from account.
+ *   - template_params Standard shape (subject, heading, message, button_text,
+ *                   button_url, to_email, to_name); we'll inject CASL footer
+ *                   into `message` and ensure to_email/to_name are set from
+ *                   account.
  *
  * Returns one of:
  *   { sent: true }
