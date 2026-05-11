@@ -250,12 +250,16 @@ export default async function handler(req, res) {
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em) || em.length > 254) {
         return res.status(400).json({ error: 'invalid email' });
       }
-      // Rate limits: stricter than login because compromised reset = takeover.
-      // 3 per email/hour blunts targeted harassment; 5 per IP/hour blunts enumeration sweeps.
-      if (!(await rateLimit(sb, 'reset_email:' + em, 3, 3600_000))) {
+      // Rate limits: stricter than login because compromised reset = takeover,
+      // but loose enough to absorb real-user retries. Calibrated 2026-05-11 after
+      // TIJ field report: users who don't see the email within ~30s click "Forgot
+      // password" 3-4 times, then hit 429 and conclude email is broken. 10/hr
+      // per email blunts targeted harassment while letting normal retry through;
+      // 30/hr per IP blunts enumeration sweeps. (cross-ref: TIJ pair-sync notes.)
+      if (!(await rateLimit(sb, 'reset_email:' + em, 10, 3600_000))) {
         return res.status(429).json({ error: 'Too many reset requests for this email. Try again in an hour.' });
       }
-      if (!(await rateLimit(sb, 'reset_ip:' + ip, 5, 3600_000))) {
+      if (!(await rateLimit(sb, 'reset_ip:' + ip, 30, 3600_000))) {
         return res.status(429).json({ error: 'Too many reset requests. Try again in an hour.' });
       }
 
