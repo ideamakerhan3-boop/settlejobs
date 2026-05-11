@@ -5,7 +5,6 @@
     { "source": "/feed", "destination": "/api/sitemap?format=rss" },
     { "source": "/unsubscribe", "destination": "/index.html" },
     { "source": "/alerts", "destination": "/index.html" },
-    { "source": "/saved", "destination": "/index.html" },
     { "source": "/about", "destination": "/index.html" },
     { "source": "/contact", "destination": "/index.html" },
     { "source": "/pricing", "destination": "/index.html" },

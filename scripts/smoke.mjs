@@ -134,10 +134,8 @@ async function main() {
     const r = await fetchTxt('/alerts');
     return r.status === 200 || `got ${r.status}`;
   });
-  await check('/saved → 200 (SPA)', async () => {
-    const r = await fetchTxt('/saved');
-    return r.status === 200 || `got ${r.status}`;
-  });
+  // (was: /saved → 200. Removed when the saved-jobs UI was reverted —
+  // API stays for future seeker accounts but the SPA route is gone.)
 
   console.log('\n--------------------------------------------------------');
   console.log(`Result: ${passed} passed, ${failed} failed`);
