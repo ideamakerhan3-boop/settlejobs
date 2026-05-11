@@ -188,8 +188,13 @@ export default async function handler(req, res) {
       "@type": "Place",
       "address": {
         "@type":           "PostalAddress",
-        "addressLocality": job.loc  || '',
-        "addressRegion":   job.prov || '',
+        // De-duplicate: stored `loc` is "Vernon, BC" form, but addressRegion
+        // already carries the province. Emitting "Vernon, BC" + "BC" makes
+        // Google's schema validator flag a duplicate. Strip trailing 2-letter
+        // province (with optional comma + space) from addressLocality.
+        // Prefer biz_city when present (already province-free).
+        "addressLocality": job.biz_city || String(job.loc || '').replace(/,\s*[A-Z]{2}\s*$/, '').trim(),
+        "addressRegion":   job.prov || job.biz_prov || '',
         "addressCountry":  "CA"
       }
     },
