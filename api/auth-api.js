@@ -75,39 +75,6 @@ export default async function handler(req, res) {
     const { action } = body;
     const ip = clientIp(req);
 
-    // ──────────────── DEBUG_ENV (temporary — Resend migration verification) ────────────────
-    // Returns boolean presence flags for email-related env vars. Never returns
-    // the actual values. Safe to expose since it only reveals "is configured"
-    // state. Remove after the post-migration sends are verified.
-    if (action === 'debug_env') {
-      let testSend = null;
-      try {
-        const { sendTransactionalEmail } = await import('./_lib/email.js');
-        const ok = await sendTransactionalEmail({
-          template_id: 'debug',
-          template_params: {
-            to_email: 'ideamakerhan2@gmail.com',
-            to_name: 'Debug',
-            subject: 'Debug send from auth-api debug_env',
-            heading: 'Debug',
-            message: 'If you receive this, the deployed code can reach Resend successfully.',
-          },
-        });
-        testSend = { result: ok, type: typeof ok };
-      } catch (e) {
-        testSend = { error: String(e?.message || e) };
-      }
-      return res.status(200).json({
-        resend_api_key_present: !!process.env.RESEND_API_KEY,
-        brand_from_email_present: !!process.env.BRAND_FROM_EMAIL,
-        brand_from_name_present: !!process.env.BRAND_FROM_NAME,
-        emailjs_service_id_present: !!process.env.EMAILJS_SERVICE_ID,
-        vercel_env: process.env.VERCEL_ENV || null,
-        vercel_deployment_id: process.env.VERCEL_DEPLOYMENT_ID || null,
-        test_send: testSend,
-      });
-    }
-
     // ──────────────── REGISTER (no prior auth) ────────────────
     if (action === 'register') {
       // Honeypot: legitimate registrations never set these fields.
