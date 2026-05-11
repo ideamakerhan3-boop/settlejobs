@@ -1292,7 +1292,8 @@ function _updateJobSEO(job) {
     "specialCommitments": _specials.join(', '),
     "identifier": {"@type":"PropertyValue","name":"YouthHire","value":String(job.job_id||job.id||'')},
     "hiringOrganization": {"@type":"Organization","@id":_orgId,"name":job.company,"sameAs":"https://www.canadayouthhire.ca"},
-    "jobLocation": {"@type":"Place","address":{"@type":"PostalAddress","addressLocality":job.loc||'',"addressRegion":job.prov||'',"addressCountry":"CA"}},
+    // De-duplicate "City, BC" loc against "BC" addressRegion. See api/job-page.js for rationale.
+    "jobLocation": {"@type":"Place","address":{"@type":"PostalAddress","addressLocality":(job.biz_city||String(job.loc||'').replace(/,\s*[A-Z]{2}\s*$/,'').trim()),"addressRegion":job.prov||job.biz_prov||'',"addressCountry":"CA"}},
     "directApply": false
   };
   // Google for Jobs: jobLocationType only accepts 'TELECOMMUTE'.

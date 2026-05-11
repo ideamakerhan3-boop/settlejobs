@@ -1477,7 +1477,8 @@ function _updateJobSEO(job) {
     "datePosted": job.postedAt||job.created_at||'',
     "employmentType": job.type||'FULL_TIME',
     "hiringOrganization": {"@type":"Organization","name":job.company},
-    "jobLocation": {"@type":"Place","address":{"@type":"PostalAddress","addressLocality":job.loc||'',"addressRegion":job.prov||'',"addressCountry":"CA"}}
+    // De-duplicate "City, BC" loc against "BC" addressRegion. See api/job-page.js for rationale.
+    "jobLocation": {"@type":"Place","address":{"@type":"PostalAddress","addressLocality":(job.biz_city||String(job.loc||'').replace(/,\s*[A-Z]{2}\s*$/,'').trim()),"addressRegion":job.prov||job.biz_prov||'',"addressCountry":"CA"}}
   });
   document.head.appendChild(sc);
 }
