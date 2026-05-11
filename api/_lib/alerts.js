@@ -1,5 +1,6 @@
-// Shared alert utilities for Twilio voice + EmailJS SMS
+// Shared alert utilities for Twilio voice + email-to-SMS gateway.
 // Used by: health-check.js, stripe-webhook.js
+// (Email path now goes through Resend via _lib/email.js — same SMS gateway address.)
 
 const ALERT_PHONE = process.env.ALERT_PHONE;
 const ALERT_TO = process.env.ALERT_PHONE_EMAIL;
@@ -31,36 +32,21 @@ export async function sendVoiceCall(message) {
 }
 
 export async function sendSmsAlert(subject, body) {
-  const serviceId  = process.env.EMAILJS_SERVICE_ID;
-  const templateId = process.env.EMAILJS_TEMPLATE_GENERAL || 'template_welcome';
-  const publicKey  = process.env.EMAILJS_PUBLIC_KEY;
-  const privateKey = process.env.EMAILJS_PRIVATE_KEY;
-  if (!serviceId || !publicKey || !privateKey || !ALERT_TO) { console.error('EmailJS not configured'); return false; }
-  try {
-    const resp = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        service_id: serviceId,
-        template_id: templateId,
-        user_id: publicKey,
-        accessToken: privateKey,
-        template_params: {
-          to_email: ALERT_TO,
-          to_name: 'Admin',
-          subject,
-          heading: subject,
-          message: (body || '').substring(0, 140),
-          button_text: '',
-        },
-      }),
-    });
-    if (!resp.ok) {
-      const txt = await resp.text();
-      console.error('SMS alert failed:', resp.status, txt);
-      return false;
-    }
-    console.log('📱 SMS alert sent:', subject);
-    return true;
-  } catch (e) { console.error('EmailJS error:', e.message); return false; }
+  if (!ALERT_TO) { console.error('ALERT_PHONE_EMAIL not configured'); return false; }
+  // Delegates to Resend-backed sendTransactionalEmail. Sends to the carrier
+  // email-to-SMS gateway address; the carrier truncates to 140 chars so we
+  // do the same here to make sure the meaningful part survives.
+  const { sendTransactionalEmail } = await import('./email.js');
+  const ok = await sendTransactionalEmail({
+    template_id: 'sms_alert',
+    template_params: {
+      to_email: ALERT_TO,
+      to_name:  'Admin',
+      subject,
+      heading:  subject,
+      message:  (body || '').substring(0, 140),
+    },
+  });
+  if (ok) console.log('📱 SMS alert sent:', subject);
+  return ok;
 }
