@@ -276,17 +276,19 @@ export default async function handler(req, res) {
           const resetUrl = 'https://www.canadayouthhire.ca/reset?token=' + token;
           const { sendTransactionalEmail } = await import('./_lib/email.js');
           await sendTransactionalEmail({
-            template_id: process.env.EMAILJS_TEMPLATE_GENERAL || 'template_welcome',
+            template_id: 'password_reset',
             template_params: {
               to_email: acct.email,
               to_name: acct.name || acct.email,
-              subject: 'Reset your YouthHire password',
+              subject: 'Reset your Canada Youth Hire password',
               heading: 'Password Reset Requested',
               message:
-                'Click the link below to choose a new password. The link expires in 1 hour.\n\n' +
+                'Click the button below to choose a new password. The link expires in 1 hour.\n\n' +
+                'If the button does not work, paste this URL into your browser:\n' +
                 resetUrl + '\n\n' +
                 'If you did not request this, you can safely ignore this email — your password will not change.',
               button_text: 'Reset Password',
+              button_url: resetUrl,
             },
           });
         } catch (e) {
