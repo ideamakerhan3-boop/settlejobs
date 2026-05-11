@@ -763,83 +763,16 @@ var _sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 // EmailJS 템플릿 3개 생성 방법:
 //   dashboard.emailjs.com → Email Templates → Create New Template
 //   아래 TEMPLATE_* 값을 각 템플릿 ID로 교체하세요.
-var EJS_SERVICE  = 'service_pbhgrg2';
-var EJS_TPL_RESET   = 'template_reset';    // 비밀번호 리셋 전용
-var EJS_TPL_GENERAL = 'template_welcome';  // 범용 템플릿 (welcome, gift, 기타 전부)
-var EJS_PUBLIC_KEY  = 'xuy9qzPNpV3EnzwSo'; // EmailJS Public Key
+// Legacy template id constants kept so existing no-op _ejsSend callers compile.
+// All transactional email is server-side (Resend) since 2026-05-10. See api/_lib/email.js.
+var EJS_TPL_RESET   = 'template_reset';
+var EJS_TPL_GENERAL = 'template_welcome';
 
-// EmailJS init removed 2026-05-10 — SDK no longer loaded. All transactional
-// email now goes through Resend server-side. See _ejsSend below for the
-// compatibility shim that turns legacy client-side send calls into no-ops.
-
-/*
- * ══════════════════════════════════════════════
- *  EmailJS 템플릿 설정 가이드
- * ══════════════════════════════════════════════
- *
- *  [1] 비밀번호 리셋 (template_reset)
- *  Variables: {{to_email}}, {{to_name}}, {{tmp_password}}
- *  Subject: Your YouthHire Temporary Password
- *  Body:
- *    Hi {{to_name}},
- *
- *    You requested a password reset for your YouthHire account.
- *
- *    Your temporary password is: {{tmp_password}}
- *
- *    Please sign in and change your password immediately.
- *
- *    Sign in: https://canadayouthhire.ca
- *
- *    If you did not request this, please ignore this email.
- *
- *    – YouthHire Team
- *
- *  [2] 회원가입 환영 (template_welcome)
- *  Variables: {{to_email}}, {{to_name}}, {{company}}
- *  Subject: Welcome to YouthHire, {{to_name}}!
- *  Body:
- *    Hi {{to_name}},
- *
- *    Welcome to YouthHire! Your account for {{company}} is ready.
- *
- *    You can now post jobs and connect with young job seekers across Canada.
- *
- *    Get started: https://canadayouthhire.ca
- *
- *    – YouthHire Team
- *
- *  [3] 크레딧 선물 알림 (template_gift)
- *  Variables: {{to_email}}, {{to_name}}, {{company}}, {{credits}}, {{note}}
- *  Subject: You've received free credits on YouthHire!
- *  Body:
- *    Hi {{to_name}},
- *
- *    Great news! {{credits}} free job posting credit(s) have been added to your account ({{company}}).
- *
- *    {{note}}
- *
- *    Sign in to post your jobs: https://canadayouthhire.ca
- *
- *    – YouthHire Team
- *
- *  [4] 만료 7일 전 알림 (서버사이드 — api/expire-jobs.js)
- *  Vercel 환경변수 설정 필요:
- *    EMAILJS_SERVICE_ID    = service_pbhgrg2
- *    EMAILJS_TEMPLATE_GENERAL = template_welcome
- *    EMAILJS_PUBLIC_KEY    = xuy9qzPNpV3EnzwSo
- *    EMAILJS_PRIVATE_KEY   = (EmailJS Dashboard → Account → General → API keys → Private Key)
- *  Variables: {{to_email}}, {{to_name}}, {{subject}}, {{heading}}, {{message}}, {{button_text}}
- * ══════════════════════════════════════════════
- */
-
-// Compatibility shim — all transactional email is now server-side (Resend).
-// Pre-migration this called emailjs.send(...) from the browser, which leaked
-// the connected Gmail OAuth account in the From header. The 6 client-side
-// callers below (welcome, gift, payment-confirm, expiry-warn, etc.) are kept
-// in place so the codepaths don't break; the welcome path moved into the
-// server-side `register` action, and the rest will migrate to server endpoints
-// as we touch them. For now they no-op.
+// Compatibility shim — pre-migration this called emailjs.send(...) from the
+// browser, which leaked the connected Gmail OAuth account in the From header.
+// Now a no-op. Client-side callers (welcome / gift / expiry-warn / payment-
+// confirm) all migrated to server-side endpoints; the no-op preserves call
+// shape (.then/.catch) so removal can happen lazily without breaking flows.
 function _ejsSend(/* templateId, params */) {
   return Promise.resolve();
 }
