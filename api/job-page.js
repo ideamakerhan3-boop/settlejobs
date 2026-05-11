@@ -326,7 +326,7 @@ ${isExpired ? '<div class="expired-banner">⚠️ This job posting has expired. 
 <h1>${esc(job.title)}</h1>
 <div class="company">${esc(job.company)}</div>
 <div class="meta">
-<span>📍 ${esc(job.loc || 'Canada')}${job.prov ? ', ' + esc(job.prov) : ''}</span>
+<span>📍 ${esc(normalizeLoc(job.loc, job.prov) || job.loc || 'Canada')}${job.prov ? ', ' + esc(job.prov) : ''}</span>
 <span>💼 ${esc(job.type || 'Full-Time')}</span>
 ${job.wage ? '<span>💰 ' + esc(job.wage) + '</span>' : ''}
 ${job.category ? '<span>📂 ' + esc(job.category) + '</span>' : ''}
@@ -337,8 +337,8 @@ ${(job.edu && job.edu !== 'None') || (job.exp_req && job.exp_req !== 'No experie
 ${posted ? '<p style="font-size:13px;color:#919191">Posted: ' + esc(posted) + (expires ? ' · Expires: ' + esc(expires) : '') + '</p>' : ''}
 
 <div class="desc">${jobDescEscaped}${job.description && job.description.length > 500 ? '...' : ''}</div>
-${job.requirements ? '<h3 style="margin:16px 0 8px;font-size:16px">Requirements</h3><ul>' + job.requirements.split('\\n').filter(Boolean).map(r => '<li>' + esc(r) + '</li>').join('') + '</ul>' : ''}
-${job.benefits ? '<h3 style="margin:16px 0 8px;font-size:16px">Benefits</h3><ul>' + job.benefits.split('\\n').filter(Boolean).map(b => '<li>' + esc(b) + '</li>').join('') + '</ul>' : ''}
+${job.requirements ? '<h3 style="margin:16px 0 8px;font-size:16px">Requirements</h3><ul>' + job.requirements.split(/\r?\n/).filter(s => s.trim()).map(r => '<li>' + esc(r.trim()) + '</li>').join('') + '</ul>' : ''}
+${job.benefits ? '<h3 style="margin:16px 0 8px;font-size:16px">Benefits</h3><ul>' + job.benefits.split(/\r?\n/).filter(s => s.trim()).map(b => '<li>' + esc(b.trim()) + '</li>').join('') + '</ul>' : ''}
 
 ${job.apply_method === 'url' && safeApplyUrl ? '<p style="margin:16px 0"><strong>Apply:</strong> <a href="' + safeApplyUrl + '" style="color:#2563EB;font-weight:700">' + safeApplyUrl + '</a></p>' : ''}
 ${job.apply_method === 'email' && job.apply_email ? '<p style="margin:16px 0"><strong>Apply:</strong> <a href="mailto:' + esc(job.apply_email) + '" style="color:#2563EB;font-weight:700">' + esc(job.apply_email) + '</a></p>' : ''}
@@ -1303,7 +1303,7 @@ a{color:#2563EB}
 <ul>
 <li><strong>Database health</strong> — every page query through Supabase, checked every minute by an internal cron.</li>
 <li><strong>Job posting flow</strong> — admin alerts on payment-webhook or job-creation failures via SMS + voice call (Twilio).</li>
-<li><strong>Email delivery</strong> — EmailJS API checked daily; expiry notice batches log per-recipient outcome.</li>
+<li><strong>Email delivery</strong> — Resend API (DKIM-signed, verified domain); expiry notice batches log per-recipient outcome.</li>
 <li><strong>SEO indexing</strong> — sitemap submitted to Google Search Console; new jobs auto-pushed to IndexNow within seconds.</li>
 <li><strong>Client-side errors</strong> — captured to a server-side log for review (no third-party monitoring).</li>
 </ul>
