@@ -1,9 +1,18 @@
 // ╔══════════════════════════════════════════════════════════════════════╗
 // ║  ⚠️  WORKING TRANSACTIONAL EMAIL PATH — DO NOT REMOVE WITHOUT THESE   ║
-// ║      THREE STEPS, IN ORDER. PR #51 (2026-05-10) ripped out the prior ║
-// ║      EmailJS path before replacement env vars were set → 30 min of   ║
-// ║      zero email sends. PR #54 re-applied correctly after env vars    ║
-// ║      were verified and a Resend test-send succeeded.                 ║
+// ║      THREE STEPS, IN ORDER.                                          ║
+// ║                                                                      ║
+// ║  Incident history that motivates this banner:                        ║
+// ║    PR #51 (2026-05-10) ripped out the prior EmailJS path before     ║
+// ║    RESEND_API_KEY was set on Vercel → 30 min of zero email sends.   ║
+// ║    PR #52 reverted. PR #54 re-applied correctly after env-first +   ║
+// ║    test-send verification.                                           ║
+// ║    PR #57 (2026-05-11) fixed a `*/` inside this file's JSDoc that    ║
+// ║    closed the comment early — esbuild bundled it but the first       ║
+// ║    runtime call threw `SyntaxError`. auth-api's try/catch swallowed  ║
+// ║    the error and returned ok:true, masking another 30 min of zero   ║
+// ║    sends. PR #61 added `.github/workflows/pr-syntax-check.yml` to    ║
+// ║    block that class of regression at PR time via `node --check`.    ║
 // ║                                                                      ║
 // ║  Before swapping THIS Resend path for another provider:              ║
 // ║    1. Confirm new provider env vars are set on Vercel (curl API).    ║
@@ -12,7 +21,7 @@
 // ║       as a fallback for a few days. Never delete in the same PR as   ║
 // ║       the new path lands.                                            ║
 // ║                                                                      ║
-// ║  Full rationale: memory/lesson_youthhire_data_safety_patterns.md §6  ║
+// ║  Full rationale: memory/lesson_youthhire_data_safety_patterns.md §6+§7║
 // ║                  Cortex/wiki/lessons/email-provider-migration-safety.md ║
 // ╚══════════════════════════════════════════════════════════════════════╝
 //
