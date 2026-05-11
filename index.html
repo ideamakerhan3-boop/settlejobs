@@ -347,10 +347,6 @@ img{display:block;max-width:100%}
 .jcard.featured::before{content:'Featured';position:absolute;top:0;right:0;background:#F5C842;color:#6B4A00;font-size:9px;font-weight:800;padding:3px 10px;border-radius:0 0 0 8px;letter-spacing:.5px}
 .jcard.jobbank{border-left:3px solid var(--blue)}
 .jcard.closed{opacity:.5;pointer-events:none}
-.j-save{position:absolute;top:10px;right:10px;background:transparent;border:none;cursor:pointer;font-size:18px;line-height:1;padding:6px;border-radius:6px;transition:background .15s;z-index:1}
-.j-save:hover{background:rgba(0,0,0,.05)}
-.j-save:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
-.jcard.featured .j-save{top:24px}
 .j-logo{width:54px;height:54px;border-radius:12px;background:var(--bg);border:1.5px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0;overflow:hidden}
 .j-body{flex:1;min-width:0}
 .j-title{font-size:16px;font-weight:700;color:var(--ink);margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:-.015em;max-width:100%}
@@ -1085,9 +1081,6 @@ var CREDIT_LEDGER = [];
 var _isLoggedIn = false;
 var _afterLoginPage = null;
 var _totalCredits = 0;  // 결제 후 지급
-// Saved-jobs in-memory cache. Populated on login via loadSavedJobIds(); used
-// by renderJobs() to show ❤️ vs 🤍 on each card. Cleared on logout.
-var _savedJobIds = new Set();
 var _usedCredits = 0;   // 사용 누적
 function getCredits(){ return Math.max(0, _totalCredits - _usedCredits); }
 function syncCredits(){
@@ -1381,10 +1374,6 @@ function go(p, skipHistory) {
     // Job alert preferences page — auth required (uses get_alert_prefs)
     if(!_isLoggedIn){ requireLogin('alerts'); return; }
     loadAlertPrefs();
-  }
-  if (p==='saved') {
-    if(!_isLoggedIn){ requireLogin('saved'); return; }
-    renderSavedJobsPage();
   }
   if (p==='post-job') {
     if(!_isLoggedIn){ requireLogin('post-job'); return; }
@@ -1729,12 +1718,6 @@ function renderJobs(list, append) {
     var cls = 'jcard' + (isJB ? ' jobbank' : '') + (j.featured ? ' featured' : '') + (isClosed ? ' jcard-closed' : '') + (isExpired ? ' jcard-expired' : '');
     var jid = j.id;
     parts.push('<div class="' + cls + '" data-jid="' + escHtml(jid) + '" onclick="openJob(this.dataset.jid)" tabindex="0" role="listitem">');
-    // Save button — top-right, doesn't propagate card click. Hidden for jobbank
-    // entries (aggregator data we don't own; bookmarking would be inconsistent).
-    if(!isJB){
-      var _isSaved = _savedJobIds.has(String(jid));
-      parts.push('<button class="j-save" data-jid="' + escHtml(jid) + '" onclick="event.stopPropagation();toggleSaveJob(this.dataset.jid,this)" aria-label="' + (_isSaved ? 'Remove from saved jobs' : 'Save this job') + '" title="' + (_isSaved ? 'Saved — click to remove' : 'Save for later') + '">' + (_isSaved ? '❤️' : '🤍') + '</button>');
-    }
     parts.push('<div class="j-logo" aria-hidden="true">' + escHtml(j.icon) + '</div>');
     parts.push('<div class="j-body">');
     parts.push('<div class="j-title">' + escHtml(j.title) + '</div>');
@@ -2142,8 +2125,6 @@ function doLogin() {
     // Analytics: login conversion. Tag admin separately so admin sessions
     // can be filtered out of public engagement reports.
     try{ _track('login', {is_admin: isAdmin}); }catch(e){}
-    // Populate saved-jobs cache so hearts render on the next list re-render.
-    try{ loadSavedJobIds(); }catch(e){}
     try{
       localStorage.setItem('cjb_logged_in','1');
       localStorage.setItem('cjb_email', em);
@@ -2238,142 +2219,6 @@ async function doRequestReset() {
     console.error('request_reset error:', e);
     if(btn){ btn.disabled=false; btn.textContent='Send Reset Link'; }
     showToast('❌ Network error. Please try again.','error');
-  }
-}
-
-// ────────────────────────────────────────────────────────────
-//  Saved Jobs — bookmark UI + /saved SPA page
-// ────────────────────────────────────────────────────────────
-async function loadSavedJobIds() {
-  // Called after login or on page load if already logged in. Populates
-  // _savedJobIds Set so the heart icons render correctly. Fail-silent.
-  if(!_isLoggedIn) { _savedJobIds = new Set(); return; }
-  var em='', pwHash='';
-  try {
-    em     = (localStorage.getItem('cjb_email')||'').toLowerCase();
-    pwHash = (sessionStorage.getItem('cjb_pwh')||'') || ((_ACCOUNTS[em]||{}).pw||'');
-  } catch(e){}
-  if(!em || !pwHash) return;
-  try {
-    var r = await _apiCall('/api/auth-api', {action:'list_saved_jobs', email:em, pw_hash:pwHash});
-    if(r && Array.isArray(r.saved_jobs)) {
-      _savedJobIds = new Set(r.saved_jobs.map(function(s){return String(s.job_id);}));
-    }
-  } catch(e){}
-}
-
-async function toggleSaveJob(jobId, btnEl) {
-  // Optimistic UI: flip the heart immediately, then call API. Revert on
-  // failure. Non-logged-in users get a login prompt with returnTo=home so
-  // they come back to the same job list.
-  if(!_isLoggedIn) {
-    showToast('Please sign in to save jobs.','warn');
-    requireLogin('home');
-    return;
-  }
-  var em='', pwHash='';
-  try {
-    em     = (localStorage.getItem('cjb_email')||'').toLowerCase();
-    pwHash = (sessionStorage.getItem('cjb_pwh')||'') || ((_ACCOUNTS[em]||{}).pw||'');
-  } catch(e){}
-  if(!em || !pwHash){ showToast('Please sign in.','warn'); requireLogin('home'); return; }
-
-  var sid = String(jobId);
-  var wasSaved = _savedJobIds.has(sid);
-  // Optimistic UI flip
-  if(wasSaved){ _savedJobIds.delete(sid); }
-  else { _savedJobIds.add(sid); }
-  if(btnEl){
-    btnEl.textContent = wasSaved ? '🤍' : '❤️';
-    btnEl.setAttribute('aria-label', wasSaved ? 'Save this job' : 'Remove from saved jobs');
-    btnEl.setAttribute('title', wasSaved ? 'Save for later' : 'Saved — click to remove');
-  }
-  // Refresh other cards with the same id (search re-renders are common)
-  document.querySelectorAll('button.j-save[data-jid="'+CSS.escape(sid)+'"]').forEach(function(b){
-    b.textContent = _savedJobIds.has(sid) ? '❤️' : '🤍';
-  });
-
-  try {
-    var action = wasSaved ? 'unsave_job' : 'save_job';
-    var r = await _apiCall('/api/auth-api', {action:action, email:em, pw_hash:pwHash, job_id:sid});
-    if(!r || r.error){
-      // Revert
-      if(wasSaved){ _savedJobIds.add(sid); }
-      else { _savedJobIds.delete(sid); }
-      if(btnEl){ btnEl.textContent = wasSaved ? '❤️' : '🤍'; }
-      showToast('❌ ' + ((r && r.error) || 'Could not save. Please try again.'),'error');
-      return;
-    }
-    showToast(wasSaved ? '✓ Removed from saved' : '❤️ Saved. View under Saved Jobs.','success');
-  } catch(e){
-    // Revert on network error
-    if(wasSaved){ _savedJobIds.add(sid); }
-    else { _savedJobIds.delete(sid); }
-    showToast('❌ Network error. Please try again.','error');
-  }
-}
-
-async function renderSavedJobsPage() {
-  var em='', pwHash='';
-  try {
-    em     = (localStorage.getItem('cjb_email')||'').toLowerCase();
-    pwHash = (sessionStorage.getItem('cjb_pwh')||'') || ((_ACCOUNTS[em]||{}).pw||'');
-  } catch(e){}
-  if(!em || !pwHash){ requireLogin('saved'); return; }
-
-  var loading = document.getElementById('saved-loading');
-  var listEl  = document.getElementById('saved-list');
-  var emptyEl = document.getElementById('saved-empty');
-  if(loading) loading.style.display='block';
-  if(listEl)  listEl.style.display='none';
-  if(emptyEl) emptyEl.style.display='none';
-
-  try {
-    var r = await _apiCall('/api/auth-api', {action:'list_saved_jobs', email:em, pw_hash:pwHash});
-    if(!r || r.error){
-      if(loading) loading.textContent = 'Could not load saved jobs.';
-      return;
-    }
-    var saved = r.saved_jobs || [];
-    // Refresh in-memory cache too
-    _savedJobIds = new Set(saved.map(function(s){return String(s.job_id);}));
-
-    if(saved.length === 0){
-      if(loading) loading.style.display='none';
-      if(emptyEl) emptyEl.style.display='block';
-      return;
-    }
-
-    if(loading) loading.style.display='none';
-    if(listEl){
-      listEl.style.display='block';
-      var rows = saved.map(function(s){
-        var j = s.job || {};
-        var title = (j.title || '(unknown job)');
-        var company = j.company || '';
-        var loc = j.loc ? (j.loc + (j.prov ? ', '+j.prov : '')) : '';
-        var status = (j.status === 'active') ? '' : (j.status === 'expired' ? ' · expired' : ' · closed');
-        var savedDate = '';
-        try { savedDate = new Date(s.saved_at).toLocaleDateString('en-CA'); } catch(e){}
-        var disabled = !s.is_active;
-        return '<li style="padding:14px 16px;border:1px solid var(--border);border-radius:10px;margin-bottom:10px;background:#fff;'+(disabled?'opacity:.6':'')+'">'
-          + '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px">'
-          + '<div style="flex:1;min-width:0">'
-          + '<div style="font-weight:700;font-size:15px;margin-bottom:4px">' + escHtml(title) + '<span style="font-size:12px;color:var(--muted);font-weight:500">' + escHtml(status) + '</span></div>'
-          + '<div style="font-size:13px;color:var(--gray)">' + escHtml(company) + (company && loc ? ' · ' : '') + escHtml(loc) + '</div>'
-          + (savedDate ? '<div style="font-size:11.5px;color:var(--muted);margin-top:4px">Saved ' + escHtml(savedDate) + '</div>' : '')
-          + '</div>'
-          + '<div style="display:flex;gap:6px;flex-shrink:0">'
-          + (disabled ? '' : '<button class="btn btn-outline btn-sm" data-jid="'+escHtml(s.job_id)+'" onclick="openJob(this.dataset.jid)">Open</button>')
-          + '<button class="btn btn-ghost btn-sm" data-jid="'+escHtml(s.job_id)+'" onclick="toggleSaveJob(this.dataset.jid,null);setTimeout(renderSavedJobsPage,400)">Remove</button>'
-          + '</div>'
-          + '</div></li>';
-      });
-      listEl.innerHTML = '<ul style="list-style:none;padding:0;margin:0">' + rows.join('') + '</ul>';
-    }
-  } catch(e){
-    console.error('renderSavedJobsPage error:', e);
-    if(loading) loading.textContent = 'Network error. Please try again.';
   }
 }
 
@@ -2550,7 +2395,6 @@ function doLogout() {
   _isLoggedIn = false;
   _totalCredits = 0;
   _usedCredits = 0;
-  _savedJobIds = new Set();  // clear bookmarks cache so hearts revert to 🤍
   DASH_ROWS = []; // 대시보드 초기화
   DRAFT_ROWS = []; // 드래프트도 초기화
   try{
@@ -4626,9 +4470,6 @@ function _initApp() {
   try{
     if(localStorage.getItem('cjb_logged_in')==='1'){
       _isLoggedIn = true;
-      // Populate saved-jobs cache so hearts render correctly on first paint.
-      // Fire-and-forget; cards re-render on doSearch which runs after.
-      try { loadSavedJobIds(); } catch(e){}
       var savedEmail = localStorage.getItem('cjb_email')||'';
       var savedName = localStorage.getItem('cjb_name')||'';
       var savedCompany = localStorage.getItem('cjb_company')||'';
@@ -5294,27 +5135,6 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 <!-- ══════════════════════════════════════════════════ -->
 <!--  JOB ALERT PREFERENCES (/alerts)                  -->
 <!-- ══════════════════════════════════════════════════ -->
-<!-- ══════════════════════════════════════════════════ -->
-<!--  SAVED JOBS (/saved)                              -->
-<!-- ══════════════════════════════════════════════════ -->
-<div id="page-saved" class="page">
-  <div class="form-page" style="max-width:720px">
-    <button class="back-btn" onclick="go('home')">← Back</button>
-    <div class="form-header">
-      <h1>Saved Jobs</h1>
-      <p>Jobs you've bookmarked. Save jobs from any listing by tapping the heart.</p>
-    </div>
-    <div id="saved-loading" style="text-align:center;padding:40px;color:var(--muted)">Loading…</div>
-    <div id="saved-empty" style="display:none;padding:40px 20px;text-align:center;border:1px dashed var(--border);border-radius:12px;color:var(--muted)">
-      <div style="font-size:36px;margin-bottom:10px">🤍</div>
-      <p style="font-weight:700;font-size:15px;color:var(--ink);margin-bottom:6px">No saved jobs yet</p>
-      <p style="font-size:13.5px">Browse current openings and tap the heart to save jobs for later.</p>
-      <button class="btn btn-primary btn-sm" style="margin-top:14px" onclick="go('home')">Browse jobs →</button>
-    </div>
-    <div id="saved-list" style="display:none"></div>
-  </div>
-</div>
-
 <div id="page-alerts" class="page">
   <div class="form-page">
     <button class="back-btn" onclick="go('dashboard')">← Back to Dashboard</button>
@@ -6006,11 +5826,6 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
             <div class="post-section-head">Email Preferences</div>
             <p style="font-size:13px;color:var(--gray);margin-bottom:10px;line-height:1.6">Get an email digest when new youth jobs match your filters. Set the location, category, and frequency that work for you.</p>
             <button class="btn btn-outline btn-sm" onclick="go('alerts')">Manage Job Alerts →</button>
-          </div>
-          <div class="post-section">
-            <div class="post-section-head">Saved Jobs</div>
-            <p style="font-size:13px;color:var(--gray);margin-bottom:10px;line-height:1.6">Bookmark jobs from the listing page (heart icon). Review your saved jobs anytime.</p>
-            <button class="btn btn-outline btn-sm" onclick="go('saved')">View Saved Jobs →</button>
           </div>
           <div class="post-section">
             <div class="post-section-head">Promo / Partner Code</div>
