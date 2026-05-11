@@ -20,22 +20,47 @@ function parseExpDate(expStr) {
   } catch(e) { return null; }
 }
 
-// Delegates to the shared transactional sender (Resend under the hood).
-// Adds a button URL so the rendered email has a clickable CTA to the dashboard.
 async function sendExpiryEmail(toEmail, toName, jobTitle, expDate, daysLeft) {
-  const { sendTransactionalEmail } = await import('./_lib/email.js');
-  return sendTransactionalEmail({
-    template_id: 'expiry_reminder',
-    template_params: {
-      to_email:    toEmail,
-      to_name:     toName || toEmail,
-      subject:     `Your job posting "${jobTitle}" expires in ${daysLeft} day${daysLeft === 1 ? '' : 's'}`,
-      heading:     'Job Posting Expiring Soon',
-      message:     `Your job posting "${jobTitle}" will expire on ${expDate}. If you'd like to keep it active, please renew it before the expiry date. Visit your dashboard to manage your postings.`,
-      button_text: 'Go to Dashboard',
-      button_url:  'https://www.canadayouthhire.ca/dashboard',
-    },
-  });
+  const serviceId  = process.env.EMAILJS_SERVICE_ID;
+  const templateId = process.env.EMAILJS_TEMPLATE_GENERAL || 'template_welcome';
+  const publicKey  = process.env.EMAILJS_PUBLIC_KEY;
+  const privateKey = process.env.EMAILJS_PRIVATE_KEY;
+
+  if (!serviceId || !publicKey || !privateKey) {
+    console.warn('EmailJS env vars not configured — skipping expiry email');
+    return false;
+  }
+
+  try {
+    const resp = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        service_id: serviceId,
+        template_id: templateId,
+        user_id: publicKey,
+        accessToken: privateKey,
+        template_params: {
+          to_email:    toEmail,
+          to_name:     toName || toEmail,
+          subject:     `Your job posting "${jobTitle}" expires in ${daysLeft} day${daysLeft === 1 ? '' : 's'}`,
+          heading:     'Job Posting Expiring Soon',
+          message:     `Your job posting "${jobTitle}" will expire on ${expDate}. If you'd like to keep it active, please renew it before the expiry date. Visit your dashboard to manage your postings.`,
+          button_text: 'Go to Dashboard',
+        },
+      }),
+    });
+
+    if (!resp.ok) {
+      const txt = await resp.text();
+      console.error('EmailJS send failed:', resp.status, txt);
+      return false;
+    }
+    return true;
+  } catch (e) {
+    console.error('EmailJS fetch error:', e.message);
+    return false;
+  }
 }
 
 // Vercel Cron: 매일 06:00 UTC에 실행
