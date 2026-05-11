@@ -719,7 +719,9 @@ if(window.location.search.indexOf('checkout=success')>=0){
 }
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<!-- EmailJS SDK removed 2026-05-10: client-side sends leaked the connected
+     Gmail OAuth account as the From header. All transactional email now goes
+     through Resend server-side via api/_lib/email.js (verified domain DKIM). -->
 <script>
 
 // ── Supabase 초기화 ──
@@ -736,16 +738,9 @@ var EJS_TPL_RESET   = 'template_reset';    // 비밀번호 리셋 전용
 var EJS_TPL_GENERAL = 'template_welcome';  // 범용 템플릿 (welcome, gift, 기타 전부)
 var EJS_PUBLIC_KEY  = 'xuy9qzPNpV3EnzwSo'; // EmailJS Public Key
 
-// EmailJS 초기화 (SDK 로드 후 실행)
-(function _ejsInit() {
-  if (typeof emailjs !== 'undefined') {
-    emailjs.init({ publicKey: EJS_PUBLIC_KEY });
-  } else {
-    document.querySelector('script[src*="emailjs"]').addEventListener('load', function() {
-      emailjs.init({ publicKey: EJS_PUBLIC_KEY });
-    });
-  }
-})();
+// EmailJS init removed 2026-05-10 — SDK no longer loaded. All transactional
+// email now goes through Resend server-side. See _ejsSend below for the
+// compatibility shim that turns legacy client-side send calls into no-ops.
 
 /*
  * ══════════════════════════════════════════════
@@ -808,12 +803,13 @@ var EJS_PUBLIC_KEY  = 'xuy9qzPNpV3EnzwSo'; // EmailJS Public Key
  * ══════════════════════════════════════════════
  */
 
-function _ejsSend(templateId, params) {
-  if (typeof emailjs === 'undefined') return Promise.resolve();
-  if (EJS_PUBLIC_KEY === 'YOUR_PUBLIC_KEY') return Promise.resolve(); // 미설정 시 무시
-  return emailjs.send(EJS_SERVICE, templateId, params).catch(function(e) {
-    console.warn('EmailJS error:', e);
-  });
+// Compatibility shim — all transactional email is now server-side (Resend).
+// Pre-migration this called emailjs.send(...) from the browser, which leaked
+// the connected Gmail OAuth account in the From header. Admin-side callers
+// (manual account create, gift credits) continue to invoke _ejsSend; for now
+// they no-op and will migrate to server actions as we touch them.
+function _ejsSend(/* templateId, params */) {
+  return Promise.resolve();
 }
 
 function sendPasswordResetEmail(email, name, tmpPw) {
