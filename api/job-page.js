@@ -79,7 +79,11 @@ export { PROVINCE_SLUGS, CATEGORY_SLUGS, EMPLOYMENT_TYPE_SLUGS };
  * Listing pages target long-tail SEO ("jobs in vancouver bc", "jobs at city of X")
  * and are real public pages, so we do NOT bot-redirect them.
  */
-const BOT_RE = /bot|crawl|spider|slurp|Googlebot|Bingbot|DuckDuck|Yandex|Baidu|facebookexternalhit|Twitterbot|LinkedInBot/i;
+// Bot UA patterns: search engines we care about for indexing + social embed
+// crawlers we care about for share previews. AppleBot powers Siri/Spotlight.
+// AhrefsBot/SemrushBot/MJ12bot are SEO tools that index our site for partner
+// queries — letting them see the SSR HTML helps backlink graph + share-of-voice.
+const BOT_RE = /bot|crawl|spider|slurp|Googlebot|Bingbot|DuckDuck|Yandex|Baidu|facebookexternalhit|Twitterbot|LinkedInBot|AhrefsBot|SemrushBot|MJ12bot|AppleBot/i;
 
 export default async function handler(req, res) {
   const { id, type, slug } = req.query;
