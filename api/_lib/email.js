@@ -1,3 +1,21 @@
+// ╔══════════════════════════════════════════════════════════════════════╗
+// ║  ⚠️  WORKING TRANSACTIONAL EMAIL PATH — DO NOT REMOVE WITHOUT THESE   ║
+// ║      THREE STEPS, IN ORDER. PR #51 (2026-05-10) ripped out the prior ║
+// ║      EmailJS path before replacement env vars were set → 30 min of   ║
+// ║      zero email sends. PR #54 re-applied correctly after env vars    ║
+// ║      were verified and a Resend test-send succeeded.                 ║
+// ║                                                                      ║
+// ║  Before swapping THIS Resend path for another provider:              ║
+// ║    1. Confirm new provider env vars are set on Vercel (curl API).    ║
+// ║    2. Test-send via the new provider and confirm delivery + From.    ║
+// ║    3. Use a feature flag (EMAIL_PROVIDER) to keep this path callable ║
+// ║       as a fallback for a few days. Never delete in the same PR as   ║
+// ║       the new path lands.                                            ║
+// ║                                                                      ║
+// ║  Full rationale: memory/lesson_youthhire_data_safety_patterns.md §6  ║
+// ║                  Cortex/wiki/lessons/email-provider-migration-safety.md ║
+// ╚══════════════════════════════════════════════════════════════════════╝
+//
 // Server-side transactional email via the Resend REST API.
 // From address is BRAND_FROM_EMAIL on a Resend-verified domain (DKIM-signed).
 //
