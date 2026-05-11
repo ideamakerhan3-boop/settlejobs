@@ -252,6 +252,32 @@ export default async function handler(req, res) {
         created_at: new Date().toISOString(),
       });
 
+      // Send a "credits added" confirmation email (server-side via Resend).
+      // Pre-Resend migration this fired from the browser via EmailJS (index.html
+      // line 1896) and leaked the operator's personal Gmail as the From. Now it
+      // sends from info@canadayouthhire.ca with full brand DKIM. Non-fatal on
+      // failure — credits are already granted, so the user still has them.
+      try {
+        const { data: acct } = await sb.from('accounts').select('name, company').eq('email', em).maybeSingle();
+        const toName = acct?.name || acct?.company || em;
+        const companyLine = acct?.company ? ' for ' + acct.company : '';
+        const { sendTransactionalEmail } = await import('./_lib/email.js');
+        await sendTransactionalEmail({
+          template_id: 'promo_credits_added',
+          template_params: {
+            to_email:    em,
+            to_name:     toName,
+            subject:     '🎁 ' + promoCredits + ' free credit' + (promoCredits === 1 ? '' : 's') + ' added to your Canada Youth Hire account',
+            heading:     'Free Credits Added!',
+            message:     'You redeemed promo code ' + upperCode + '. ' + promoCredits + ' free job posting credit' + (promoCredits === 1 ? ' has' : 's have') + ' been added to your account' + companyLine + '. Your balance is now ' + result.total + ' credit' + (result.total === 1 ? '' : 's') + ' total — go post a job and reach Canadian youth job seekers directly.',
+            button_text: 'Post a Job',
+            button_url:  'https://www.canadayouthhire.ca/post-job',
+          },
+        });
+      } catch (e) {
+        console.error('promo: gift email send failed for', em, e.message);
+      }
+
       return res.status(200).json({ total: result.total, used: result.used, credits_given: promoCredits, code: upperCode });
     }
 
