@@ -2,6 +2,7 @@ import { createClient } from '@supabase/supabase-js';
 import { purgeExpiredRateLimits } from './_lib/ratelimit.js';
 import { sendMarketingEmail } from './_lib/email.js';
 import { BRAND, EMAIL_TEMPLATES } from './_lib/marketing-config.js';
+import { timingSafeEqual } from 'node:crypto';
 
 const sb = createClient(
   process.env.SUPABASE_URL,
@@ -9,6 +10,20 @@ const sb = createClient(
 );
 
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+// Timing-safe comparison for "Bearer <secret>" auth header against env secret.
+// Plain === leaks secret length via response time. crypto.timingSafeEqual
+// requires equal-length buffers, so we early-exit on length mismatch.
+function cronAuthOk(authHeader, expectedSecret) {
+  if (!authHeader || !expectedSecret) return false;
+  const expected = 'Bearer ' + expectedSecret;
+  try {
+    const a = Buffer.from(authHeader);
+    const b = Buffer.from(expected);
+    if (a.length !== b.length) return false;
+    return timingSafeEqual(a, b);
+  } catch (_) { return false; }
+}
 
 function parseExpDate(expStr) {
   if (!expStr) return null;
@@ -38,13 +53,13 @@ async function sendExpiryEmail(toEmail, toName, jobTitle, expDate, daysLeft) {
   });
 }
 
-// Vercel Cron: 매일 06:00 UTC에 실행
+// Vercel Cron: 매일 14:00 UTC에 실행 (= 09:00 EST / 06:00 PST — Canadian morning)
 export default async function handler(req, res) {
   if (!process.env.CRON_SECRET) {
     console.error('CRON_SECRET is not configured');
     return res.status(500).json({ error: 'CRON_SECRET not configured' });
   }
-  if (req.headers.authorization !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (!cronAuthOk(req.headers.authorization, process.env.CRON_SECRET)) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
 

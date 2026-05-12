@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { timingSafeEqual } from 'node:crypto';
 
 const sb = createClient(
   process.env.SUPABASE_URL,
@@ -10,8 +11,18 @@ const sb = createClient(
 export default async function handler(req, res) {
   if (req.method !== 'GET') return res.status(405).end();
 
-  const cronAuth = req.headers.authorization === `Bearer ${process.env.CRON_SECRET}`;
-  const keyAuth = req.query.key === process.env.ADMIN_API_KEY;
+  // Timing-safe comparison: plain === leaks length via response time.
+  // crypto.timingSafeEqual requires equal-length buffers, so we early-exit on mismatch.
+  const _safeEq = (a, b) => {
+    try {
+      const ba = Buffer.from(String(a || ''));
+      const bb = Buffer.from(String(b || ''));
+      if (ba.length !== bb.length) return false;
+      return timingSafeEqual(ba, bb);
+    } catch (_) { return false; }
+  };
+  const cronAuth = _safeEq(req.headers.authorization, `Bearer ${process.env.CRON_SECRET}`);
+  const keyAuth = _safeEq(req.query.key, process.env.ADMIN_API_KEY);
   if (!cronAuth && !keyAuth) {
     return res.status(403).json({ error: 'Unauthorized' });
   }

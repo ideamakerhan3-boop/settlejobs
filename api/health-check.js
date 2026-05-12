@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { sendVoiceCall, sendSmsAlert } from './_lib/alerts.js';
+import { timingSafeEqual } from 'node:crypto';
 
 const sb = createClient(
   process.env.SUPABASE_URL,
@@ -227,7 +228,16 @@ export default async function handler(req, res) {
   }
   const auth = req.headers.authorization || '';
   const querySecret = (req.query && req.query.secret) || '';
-  if (auth !== `Bearer ${process.env.CRON_SECRET}` && querySecret !== process.env.CRON_SECRET) {
+  // Timing-safe comparison — plain === leaks secret length via response time.
+  const _safeEq = (a, b) => {
+    try {
+      const ba = Buffer.from(String(a || ''));
+      const bb = Buffer.from(String(b || ''));
+      if (ba.length !== bb.length) return false;
+      return timingSafeEqual(ba, bb);
+    } catch (_) { return false; }
+  };
+  if (!_safeEq(auth, `Bearer ${process.env.CRON_SECRET}`) && !_safeEq(querySecret, process.env.CRON_SECRET)) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
