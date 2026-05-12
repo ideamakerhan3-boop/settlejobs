@@ -154,7 +154,20 @@ export default async function handler(req, res) {
   const isExpired = expires && new Date(expires) < new Date();
 
   const url   = BASE + '/jobs/' + id;
-  const title = esc(job.title) + ' at ' + esc(job.company) + ' — YouthHire';
+  // SEO best practice: keep <title> ~60 chars so Google SERP doesn't truncate
+  // mid-word. Strategy: full "Title at Company — YouthHire" if it fits,
+  // else drop the company, else hard-truncate the title itself.
+  const SUFFIX = ' — YouthHire';
+  const TITLE_MAX = 60;
+  const room = TITLE_MAX - SUFFIX.length;
+  let titleCore = esc(job.title) + ' at ' + esc(job.company);
+  if (titleCore.length > room) {
+    titleCore = esc(job.title);
+    if (titleCore.length > room) {
+      titleCore = titleCore.slice(0, room - 1) + '…';
+    }
+  }
+  const title = titleCore + SUFFIX;
   const desc  = esc(job.title) + ' job in ' + esc(job.loc || 'Canada') + '. '
               + esc(job.type || 'Full-Time') + ' position at ' + esc(job.company)
               + '. Apply on YouthHire.';
