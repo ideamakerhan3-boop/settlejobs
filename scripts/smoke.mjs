@@ -77,6 +77,25 @@ async function main() {
       const r = await fetchTxt('/jobs/' + activeId);
       return r.status === 302 || `got ${r.status}`;
     });
+
+    // Regression guards for PRs #65 / #66 / #70 / #72 — keep the wins locked in.
+    await check(`/jobs/${activeId} <title> ≤ 60 chars (PR #70 truncation)`, async () => {
+      const r = await fetchTxt('/jobs/' + activeId, { 'User-Agent': UA_BOT });
+      const m = r.text.match(/<title>([^<]*)<\/title>/);
+      if (!m) return 'no <title> tag';
+      return m[1].length <= 60 || `title is ${m[1].length} chars: ${m[1]}`;
+    });
+    await check(`/jobs/${activeId} addressLocality has no province code (PR #65/#66)`, async () => {
+      const r = await fetchTxt('/jobs/' + activeId, { 'User-Agent': UA_BOT });
+      const m = r.text.match(/"addressLocality":"([^"]*)"/);
+      if (!m) return 'no addressLocality in JSON-LD';
+      // PR #65/#66 strips trailing ", BC" etc. — locality should be a city alone.
+      return !/, [A-Z]{2}$/.test(m[1]) || `locality still has province: ${m[1]}`;
+    });
+    await check(`/jobs/${activeId} bot HTML has mobile @media (PR #72)`, async () => {
+      const r = await fetchTxt('/jobs/' + activeId, { 'User-Agent': UA_BOT });
+      return r.text.includes('@media (max-width:600px)') || 'no mobile media query';
+    });
   } else {
     fail('JobPosting flow', 'no active job id in sitemap to test against');
   }
@@ -134,8 +153,36 @@ async function main() {
     const r = await fetchTxt('/alerts');
     return r.status === 200 || `got ${r.status}`;
   });
+  await check('/status → 200 with status signal', async () => {
+    const r = await fetchTxt('/status');
+    if (r.status !== 200) return `got ${r.status}`;
+    // Status page emits "All systems normal" / "Degraded" / "Issues" depending on signals
+    return /All systems|operational|active jobs/i.test(r.text) || 'no status copy detected';
+  });
   // (was: /saved → 200. Removed when the saved-jobs UI was reverted —
   // API stays for future seeker accounts but the SPA route is gone.)
+
+  console.log('\n[7] Security posture');
+  await check('Security headers present (HSTS + X-Frame-Options + CSP)', async () => {
+    const r = await fetch(BASE + '/', { redirect: 'manual' });
+    const missing = [];
+    if (!r.headers.get('strict-transport-security')) missing.push('HSTS');
+    if (!r.headers.get('x-frame-options')) missing.push('X-Frame-Options');
+    if (!r.headers.get('content-security-policy')) missing.push('CSP');
+    return missing.length === 0 || `missing: ${missing.join(', ')}`;
+  });
+  await check('/api/auth-api unauth login → 401/403', async () => {
+    const r = await fetch(BASE + '/api/auth-api', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'login', email: 'nonexistent@example.invalid', pw_hash: 'a'.repeat(64) }),
+    });
+    return (r.status === 401 || r.status === 403) || `got ${r.status} (expected 401/403)`;
+  });
+  await check('/api/health-check unauth → 401', async () => {
+    const r = await fetch(BASE + '/api/health-check');
+    return r.status === 401 || `got ${r.status} (expected 401 without Bearer)`;
+  });
 
   console.log('\n--------------------------------------------------------');
   console.log(`Result: ${passed} passed, ${failed} failed`);
