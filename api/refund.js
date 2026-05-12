@@ -1,6 +1,7 @@
 import Stripe from 'stripe';
 import { createClient } from '@supabase/supabase-js';
 import { verifyAndUpgrade } from './_lib/verify.js';
+import { rateLimit } from './_lib/ratelimit.js';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 const sb = createClient(
@@ -10,6 +11,17 @@ const sb = createClient(
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end();
+
+  // Capture IP early (used for both rate limit + error correlation).
+  const ip = (req.headers['x-forwarded-for'] || '').split(',')[0].trim() || req.socket?.remoteAddress || 'unknown';
+
+  // Rate limit: 20 refund attempts / hour / IP. Stripe refund is irreversible
+  // and admin-only, so this caps the blast radius if admin creds get stolen.
+  // 20/hr easily absorbs legitimate batch refunds (e.g., morning reconciliation)
+  // while making a script-driven sweep noisy and slow.
+  if (!(await rateLimit(sb, 'refund:' + ip, 20, 3600_000))) {
+    return res.status(429).json({ error: 'Too many refund attempts. Try again in an hour.' });
+  }
 
   let body = '';
   try {

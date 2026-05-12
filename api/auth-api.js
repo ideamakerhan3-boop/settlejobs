@@ -364,6 +364,16 @@ export default async function handler(req, res) {
         return res.status(200).json({ ok: true, throttled: true });
       }
       const cap = (s, n) => (s ? String(s).slice(0, n) : null);
+      // Cap meta JSON at 2KB serialized — normal pageview meta is <200B, this
+      // blocks log-bomb attacks while leaving 10× headroom for legitimate use.
+      // Oversize → store an empty object (don't 400, analytics must not break the app).
+      let safeMeta = {};
+      try {
+        if (body.meta && typeof body.meta === 'object') {
+          const serialized = JSON.stringify(body.meta);
+          if (serialized.length <= 2048) safeMeta = body.meta;
+        }
+      } catch (_) { /* circular ref etc. — fall through to empty */ }
       try {
         await sb.from('events').insert({
           event_type:    t,
@@ -374,7 +384,7 @@ export default async function handler(req, res) {
           utm_source:    cap(body.utm_source, 60),
           utm_medium:    cap(body.utm_medium, 60),
           utm_campaign:  cap(body.utm_campaign, 80),
-          meta:          (body.meta && typeof body.meta === 'object') ? body.meta : {}
+          meta:          safeMeta
         });
       } catch (e) {
         // Never surface insert errors — analytics must never break the app
@@ -492,13 +502,32 @@ export default async function handler(req, res) {
         'remote','requirements','benefits','biz_city','biz_prov',
         'posted_by_acc_company',
       ]);
+      // Per-column length caps. Anything past the cap is silently truncated.
+      // Sized to comfortably hold the longest realistic real-world value while
+      // making DB-flood attacks unprofitable (Supabase free-tier 500MB ceiling).
+      const CAPS = {
+        job_id: 64, title: 200, company: 200, loc: 120, prov: 4,
+        type: 40, wage: 80, category: 60, status: 20,
+        posted_date: 40, exp_date: 40, apply_method: 20,
+        apply_email: 254, apply_url: 500,
+        lang: 60, edu: 60, exp_req: 60, vacancy: 20, ai_use: 20, remote: 20,
+        description: 20000, requirements: 5000, benefits: 5000,
+        biz_city: 120, biz_prov: 4, posted_by_acc_company: 200,
+      };
       const clean = {};
       for (const k of Object.keys(job)) {
-        if (ALLOWED.has(k)) clean[k] = job[k];
+        if (!ALLOWED.has(k)) continue;
+        const v = job[k];
+        if (v == null) { clean[k] = v; continue; }
+        if (typeof v === 'string' && CAPS[k]) {
+          clean[k] = v.slice(0, CAPS[k]);
+        } else {
+          clean[k] = v;
+        }
       }
       // Force the email to be the authenticated user's email (prevent spoofing)
       clean.email = em;
-      clean.posted_by_acc_company = acct.company || clean.posted_by_acc_company || '';
+      clean.posted_by_acc_company = String(acct.company || clean.posted_by_acc_company || '').slice(0, CAPS.posted_by_acc_company);
       clean.created_at = new Date().toISOString();
       if (!clean.job_id) return res.status(400).json({ error: 'job_id required' });
       const { data, error } = await sb.from('jobs').upsert(clean, { onConflict: 'job_id' }).select();
