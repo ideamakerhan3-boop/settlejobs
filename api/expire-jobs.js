@@ -25,13 +25,31 @@ function cronAuthOk(authHeader, expectedSecret) {
   } catch (_) { return false; }
 }
 
+// Accepts either human "Mon DD, YYYY" (legacy admin form output) or ISO
+// "YYYY-MM-DD" (HTML <input type=date> default). Returns Date at local
+// midnight on success, null on unparseable input. Defensive: future schema
+// changes can swap format without breaking the expiry cron.
 function parseExpDate(expStr) {
   if (!expStr) return null;
   try {
-    var parts = expStr.replace(',','').split(' ');
+    var s = String(expStr).trim();
+    // ISO YYYY-MM-DD or YYYY-MM-DDTHH... — verify components match the Date
+    // (JS Date overflows month 13 → next-year January; reject explicitly).
+    var iso = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (iso) {
+      var y = parseInt(iso[1]), m = parseInt(iso[2]) - 1, dd = parseInt(iso[3]);
+      if (m < 0 || m > 11 || dd < 1 || dd > 31) return null;
+      var d = new Date(y, m, dd);
+      if (isNaN(d.getTime()) || d.getFullYear() !== y || d.getMonth() !== m || d.getDate() !== dd) return null;
+      return d;
+    }
+    // Legacy human format: "Jul 1, 2026" or "Jul 1 2026"
+    var parts = s.replace(',','').split(' ').filter(Boolean);
+    if (parts.length < 3) return null;
     var mIdx = MONTHS.indexOf(parts[0]);
     if (mIdx < 0) return null;
-    return new Date(parseInt(parts[2]), mIdx, parseInt(parts[1]));
+    var d2 = new Date(parseInt(parts[2]), mIdx, parseInt(parts[1]));
+    return isNaN(d2.getTime()) ? null : d2;
   } catch(e) { return null; }
 }
 
