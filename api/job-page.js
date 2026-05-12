@@ -85,6 +85,15 @@ export { PROVINCE_SLUGS, CATEGORY_SLUGS, EMPLOYMENT_TYPE_SLUGS };
 // queries — letting them see the SSR HTML helps backlink graph + share-of-voice.
 const BOT_RE = /bot|crawl|spider|slurp|Googlebot|Bingbot|DuckDuck|Yandex|Baidu|facebookexternalhit|Twitterbot|LinkedInBot|AhrefsBot|SemrushBot|MJ12bot|AppleBot/i;
 
+// Mobile-responsive overrides injected into every bot/SSR page's <style> block.
+// Google's mobile-first indexing reads exactly this HTML, so the responsive
+// behavior here directly affects ranking signals. Targets: ≤600px viewport.
+// - tighten body margin/padding (40px → 16px) so above-the-fold isn't eaten
+// - scale typography down (28px h1 → 22px, 20px h2 → 17px, 14px body keeps)
+// - make CTA full-width on mobile (easier thumb tap, ~44px touch-target height)
+// - allow long titles to wrap (overflow-wrap: anywhere)
+const MOBILE_CSS = '@media (max-width:600px){body{margin:16px auto;padding:0 16px;font-size:15px}h1{font-size:22px;line-height:1.3;overflow-wrap:anywhere}h2{font-size:17px}.company{font-size:17px}.cta{display:block;width:100%;box-sizing:border-box;text-align:center;padding:14px 16px}.meta span{display:inline-block;margin:0 12px 4px 0}}';
+
 export default async function handler(req, res) {
   const { id, type, slug } = req.query;
 
@@ -327,7 +336,7 @@ h1{color:#2563EB;font-size:28px;margin-bottom:4px}
 .expired-banner{background:#FEF3C7;border:1px solid #F59E0B;border-radius:8px;padding:12px 16px;margin-bottom:24px;font-weight:600;color:#92400E}
 .footer{margin-top:48px;padding-top:20px;border-top:1px solid #E2E2DC;font-size:13px;color:#919191}
 a{color:#2563EB}
-</style>
+${MOBILE_CSS}</style>
 </head>
 <body>
 <nav style="margin-bottom:32px">
@@ -626,7 +635,7 @@ nav{margin-bottom:32px;font-size:14px}
 .cta{display:inline-block;background:#2563EB;color:#fff;padding:14px 28px;border-radius:10px;text-decoration:none;font-weight:700;margin:24px 0}
 .footer{margin-top:48px;padding-top:20px;border-top:1px solid #E2E2DC;font-size:13px;color:#919191}
 a:hover{text-decoration:underline}
-</style>
+${MOBILE_CSS}</style>
 </head>
 <body>
 <nav>
@@ -785,7 +794,7 @@ nav{margin-bottom:32px;font-size:14px}
 .cta{display:inline-block;background:#2563EB;color:#fff;padding:14px 28px;border-radius:10px;text-decoration:none;font-weight:700;margin:24px 0}
 .footer{margin-top:48px;padding-top:20px;border-top:1px solid #E2E2DC;font-size:13px;color:#919191}
 a{color:#2563EB}
-</style>
+${MOBILE_CSS}</style>
 </head>
 <body>
 <nav>
@@ -973,7 +982,7 @@ nav{margin-bottom:32px;font-size:14px}
 .cross h2{font-size:14px;text-transform:uppercase;letter-spacing:.5px;color:#5A5A5A;margin:0 0 12px;font-weight:600}
 .footer{margin-top:48px;padding-top:20px;border-top:1px solid #E2E2DC;font-size:13px;color:#919191}
 a{color:#2563EB}
-</style>
+${MOBILE_CSS}</style>
 </head>
 <body>
 <nav>
@@ -1079,7 +1088,7 @@ th{background:#FAFAF7;font-weight:700;font-size:12px;text-transform:uppercase;le
 .footer{margin-top:48px;padding-top:24px;border-top:1px solid #E2E2DC;font-size:13px;color:#919191}
 a{color:#2563EB}
 .note{padding:12px 16px;background:#EFF6FF;border-left:3px solid #2563EB;border-radius:6px;font-size:13.5px;color:#1E3A8A;margin:12px 0}
-</style>
+${MOBILE_CSS}</style>
 </head>
 <body>
 <nav>
@@ -1284,7 +1293,7 @@ li{margin:4px 0}
 .footer{margin-top:48px;padding-top:20px;border-top:1px solid #E2E2DC;font-size:13px;color:#919191}
 a{color:#2563EB}
 .checked-at{color:#919191;font-size:13px;margin-top:6px}
-</style>
+${MOBILE_CSS}</style>
 </head>
 <body>
 <nav>
@@ -1432,7 +1441,7 @@ ul{padding-left:22px;margin:8px 0}
 li{margin:4px 0}
 a{color:#2563EB}
 .compliance-seal{display:inline-block;background:#ECFDF5;border:1px solid #A7F3D0;color:#065F46;padding:4px 10px;border-radius:99px;font-size:12px;font-weight:700;margin:0 6px 6px 0}
-</style>
+${MOBILE_CSS}</style>
 </head>
 <body>
 <nav>
@@ -1563,7 +1572,7 @@ h1{color:#2563EB;font-size:32px;margin-bottom:8px}
 .cta{display:inline-block;background:#2563EB;color:#fff;padding:14px 28px;border-radius:10px;text-decoration:none;font-weight:700;margin:8px}
 .cta-alt{display:inline-block;background:#fff;color:#2563EB;border:1px solid #2563EB;padding:14px 28px;border-radius:10px;text-decoration:none;font-weight:700;margin:8px}
 a{color:#2563EB}
-</style>
+${MOBILE_CSS}</style>
 </head>
 <body>
 <h1>Page not found</h1>
@@ -1592,7 +1601,7 @@ function renderEmptyListing(type, slug, res) {
 <link rel="alternate" hreflang="en-CA" href="${BASE}/">
 <link rel="alternate" hreflang="x-default" href="${BASE}/">
 <meta name="robots" content="noindex, follow">
-<style>body{font-family:system-ui,sans-serif;max-width:600px;margin:80px auto;padding:0 20px;text-align:center;color:#0F0F0F}a{color:#2563EB}</style>
+<style>body{font-family:system-ui,sans-serif;max-width:600px;margin:80px auto;padding:0 20px;text-align:center;color:#0F0F0F}a{color:#2563EB}${MOBILE_CSS}</style>
 </head>
 <body>
 <h1>No active jobs found</h1>
