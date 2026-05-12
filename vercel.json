@@ -61,7 +61,7 @@
   "crons": [
     {
       "path": "/api/expire-jobs",
-      "schedule": "0 6 * * *"
+      "schedule": "0 14 * * *"
     },
     {
       "path": "/api/export-data",

@@ -759,53 +759,8 @@ var SUPABASE_URL = 'https://xouvuqqkbtaikrnnueda.supabase.co';
 var SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhvdXZ1cXFrYnRhaWtybm51ZWRhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUyNDk4NDgsImV4cCI6MjA5MDgyNTg0OH0.pHbWMMttRwzltgY4paQ6gfQNnTkqR4gkDF3N2kAgOyA';
 var _sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-// ── EmailJS 설정 ──
-// EmailJS 템플릿 3개 생성 방법:
-//   dashboard.emailjs.com → Email Templates → Create New Template
-//   아래 TEMPLATE_* 값을 각 템플릿 ID로 교체하세요.
-// Legacy template id constants kept so existing no-op _ejsSend callers compile.
 // All transactional email is server-side (Resend) since 2026-05-10. See api/_lib/email.js.
-var EJS_TPL_RESET   = 'template_reset';
-var EJS_TPL_GENERAL = 'template_welcome';
-
-// Compatibility shim — pre-migration this called emailjs.send(...) from the
-// browser, which leaked the connected Gmail OAuth account in the From header.
-// Now a no-op. Client-side callers (welcome / gift / expiry-warn / payment-
-// confirm) all migrated to server-side endpoints; the no-op preserves call
-// shape (.then/.catch) so removal can happen lazily without breaking flows.
-function _ejsSend(/* templateId, params */) {
-  return Promise.resolve();
-}
-
-function sendPasswordResetEmail(email, name, tmpPw) {
-  return _ejsSend(EJS_TPL_RESET, {
-    to_email: email,
-    to_name:  name || email,
-    tmp_password: tmpPw,
-  });
-}
-
-function sendWelcomeEmail(email, name, company) {
-  return _ejsSend(EJS_TPL_GENERAL, {
-    to_email: email,
-    to_name:  name || email,
-    subject:  'Welcome to YouthHire, ' + (name || email) + '!',
-    heading:  'Welcome to YouthHire!',
-    message:  'Your account for ' + (company || 'your company') + ' has been created successfully. You can now post jobs and connect with young job seekers across Canada.',
-    button_text: 'Go to Dashboard',
-  });
-}
-
-function sendGiftEmail(email, name, company, credits, note) {
-  return _ejsSend(EJS_TPL_GENERAL, {
-    to_email: email,
-    to_name:  name || email,
-    subject:  "You've received free credits on YouthHire!",
-    heading:  'Free Credits Added!',
-    message:  credits + ' free job posting credit(s) have been added to your account (' + (company || email) + '). Start posting today!',
-    button_text: 'Post a Job Now',
-  });
-}
+// The client-side EmailJS shim + wrappers + callsites were removed 2026-05-12.
 
 // ── DB 헬퍼 함수 ──
 async function hashPw(pw) {
@@ -1825,13 +1780,7 @@ async function applyPromoCode(code, email, company) {
     try {
       _totalCredits = promoRes.total; _usedCredits = promoRes.used; syncCredits();
       showToast('🎁 ' + credits + ' free credits added! Code: ' + code, 'success');
-      _ejsSend(EJS_TPL_GENERAL, {
-        to_email: email, to_name: company || email,
-        subject: 'Welcome! ' + credits + ' Free Credits — YouthHire',
-        heading: '🎁 Partner Bonus Credits!',
-        message: 'You used partner code <strong>' + code + '</strong>. ' + credits + ' free job posting credits have been added to your account. Start posting today!',
-        button_text: 'Post a Job Now',
-      }).catch(function(){});
+      // Gift email is sent server-side by credits-api.js `promo` action (PR #60).
     } catch(e2) { console.error('applyPromoCode post-API error:', e2); }
     return true;
 
@@ -2000,7 +1949,7 @@ function _doRegisterFinish(em, pw, name, co, ds, promoCode) {
   var ae=document.getElementById('acc-email'); if(ae) ae.value=em;
 
   showToast('🎉 Welcome! 5 free credits added to your account!','success');
-  sendWelcomeEmail(em, name, co); // EmailJS 환영 이메일
+  // Welcome email is sent server-side by auth-api.js `register` action.
 
   _afterLoginPage = null;
   updateNavState();
@@ -4287,17 +4236,7 @@ function autoExpireJobs() {
           var alertKey = 'cjb_exp_alert_' + j.id;
           var lastAlert = localStorage.getItem(alertKey);
           var today = now.toISOString().substring(0,10);
-          if(lastAlert !== today) {
-            localStorage.setItem(alertKey, today);
-            _ejsSend(EJS_TPL_GENERAL, {
-              to_email: j.email,
-              to_name: j.company || j.email,
-              subject: 'Your job posting expires in ' + daysLeft + ' day(s) — YouthHire',
-              heading: 'Posting Expiring Soon!',
-              message: 'Your job posting "' + (j.title||'Untitled') + '" will expire in ' + daysLeft + ' day(s). Renew now to keep it visible to young job seekers across Canada.',
-              button_text: 'Renew Posting',
-            }).catch(function(){});
-          }
+          // Expiry warning email is sent server-side by expire-jobs.js cron (daily).
         }
       }
     } catch(e){}
@@ -4503,17 +4442,7 @@ function _initApp() {
               }
               // 4. pending txn 클리어
               try{ localStorage.removeItem('cjb_pending_txn'); }catch(e){}
-              // 5. 결제 확인 이메일 발송
-              var _paidCredits = _ptRaw ? (_ptRaw.credits||1) : (_totalCredits||1);
-              var _paidPkg = _ptRaw ? (_ptRaw.pkg||'Credit') : 'Credit';
-              _ejsSend(EJS_TPL_GENERAL, {
-                to_email: savedEmail,
-                to_name: savedName || savedEmail,
-                subject: 'Payment Confirmed — YouthHire',
-                heading: 'Payment Confirmed!',
-                message: 'Your payment has been processed successfully. ' + _paidCredits + ' job posting credit(s) (' + _paidPkg + ') have been added to your account. You can now post jobs and connect with young job seekers across Canada.',
-                button_text: 'Post a Job Now',
-              }).catch(function(){});
+              // Stripe sends its own payment receipt; no app-side confirmation email currently.
               showToast('✅ Payment successful! Credits added.', 'success');
               go('dashboard');
               setTimeout(function(){ var lb=document.getElementById('dnb-listings'); if(lb) dTab('listings',lb); renderDash(); updateDashStats(); },300);
