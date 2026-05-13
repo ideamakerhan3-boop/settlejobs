@@ -1910,10 +1910,10 @@ function openJob(id) {
     h+='<h3 style="margin-bottom:12px">How to Apply</h3>';
     h+='<p style="font-size:13.5px;color:var(--gray);line-height:1.7;margin-bottom:14px">Send your resume and a brief intro to the email below. No account needed — apply directly to the employer.</p>';
     h+='<div style="background:var(--bg);border:1.5px solid var(--border);border-radius:10px;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px">';
-    h+='<span style="font-size:13.5px;font-weight:700;color:var(--ink)">✉ '+j.email+'</span>';
-    h+='<button class="btn btn-outline btn-sm" style="flex-shrink:0;font-size:12px" data-email="'+j.email+'" onclick="copyEmail(this.dataset.email)">Copy</button>';
+    h+='<span style="font-size:13.5px;font-weight:700;color:var(--ink)">✉ '+escHtml(j.email)+'</span>';
+    h+='<button class="btn btn-outline btn-sm" style="flex-shrink:0;font-size:12px" data-email="'+escHtml(j.email)+'" onclick="copyEmail(this.dataset.email)">Copy</button>';
     h+='</div>';
-    h+='<a href="mailto:'+j.email+'" class="btn btn-primary" style="display:block;text-align:center;text-decoration:none">✉ Send Email</a>';
+    h+='<a href="mailto:'+encodeURIComponent(j.email)+'" class="btn btn-primary" style="display:block;text-align:center;text-decoration:none">✉ Send Email</a>';
     h+='</div>';
   } else if(isActive){
     h+='<div class="detail-card" style="border:2px solid var(--border);text-align:center;padding:24px">';
@@ -4208,12 +4208,12 @@ function renderAdminJobs() {
     var accEmail = j.postedByEmail || '—';
     var accCompany = j.postedByAccCompany || '—';
     h+='<tr'+(isDeleted?' style="opacity:.5"':'')+'>';
-    h+='<td><strong style="color:#60A5FA;cursor:pointer" onclick="adminViewJob('+jidStr+')">'+ j.title+'</strong>'+(isJB?'<span style="font-size:10px;color:#60A5FA;margin-left:4px">🇨🇦 JB</span>':'')+(isDeleted?'<span style="font-size:10px;color:#F87171;margin-left:6px">삭제</span>':'')+'</td>';
-    h+='<td style="font-size:11px;color:#60A5FA">'+accEmail+'</td>';
-    h+='<td style="font-size:11px;color:rgba(255,255,255,.4)">'+accCompany+'</td>';
-    h+='<td style="font-weight:600">'+j.company+'</td>';
-    h+='<td>'+j.loc+'</td>';
-    h+='<td>'+(j.salary||'—')+'</td><td>'+j.date+'</td><td>'+j.exp+'</td>';
+    h+='<td><strong style="color:#60A5FA;cursor:pointer" onclick="adminViewJob('+jidStr+')">'+escHtml(j.title)+'</strong>'+(isJB?'<span style="font-size:10px;color:#60A5FA;margin-left:4px">🇨🇦 JB</span>':'')+(isDeleted?'<span style="font-size:10px;color:#F87171;margin-left:6px">삭제</span>':'')+'</td>';
+    h+='<td style="font-size:11px;color:#60A5FA">'+escHtml(accEmail)+'</td>';
+    h+='<td style="font-size:11px;color:rgba(255,255,255,.4)">'+escHtml(accCompany)+'</td>';
+    h+='<td style="font-weight:600">'+escHtml(j.company)+'</td>';
+    h+='<td>'+escHtml(j.loc)+'</td>';
+    h+='<td>'+escHtml(j.salary||'—')+'</td><td>'+escHtml(j.date)+'</td><td>'+escHtml(j.exp)+'</td>';
     h+='<td><span class="abadge '+bc+'">'+statusLabel+'</span></td>';
     h+='<td><div class="a-tbl-acts" style="flex-direction:row;flex-wrap:nowrap;gap:3px">';
     h+='<button class="abtn abtn-b" style="font-size:10px;padding:4px 6px" onclick="adminViewJob('+jidStr+')">📋</button>';
@@ -4602,7 +4602,7 @@ function renderAdminRevenue() {
     h+='<tr>';
     h+='<td style="color:rgba(255,255,255,.35);font-size:11px">'+tx.id+'</td>';
     h+='<td>'+tx.date+'</td>';
-    h+='<td><strong>'+tx.co+'</strong><div style="font-size:11px;color:rgba(255,255,255,.3)">'+tx.email+'</div></td>';
+    h+='<td><strong>'+escHtml(tx.co)+'</strong><div style="font-size:11px;color:rgba(255,255,255,.3)">'+escHtml(tx.email)+'</div></td>';
     h+='<td>'+tx.pkg+'</td>';
     h+='<td>'+mi+' '+tx.method.charAt(0).toUpperCase()+tx.method.slice(1)+'</td>';
     var isNeg = tx.status==='refunded'||tx.status==='cancelled';
@@ -5123,8 +5123,8 @@ function renderInteracPendingList(){
     h+='<div style="padding:16px 20px;border-bottom:1px solid rgba(255,255,255,.07)">';
     h+='<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px">';
     h+='<div style="flex:1">';
-    h+='<div style="font-weight:700;color:#fff;font-size:14px;margin-bottom:2px">'+tx.co+'</div>';
-    h+='<div style="font-size:12px;color:rgba(255,255,255,.4);margin-bottom:6px">'+tx.email+'</div>';
+    h+='<div style="font-weight:700;color:#fff;font-size:14px;margin-bottom:2px">'+escHtml(tx.co)+'</div>';
+    h+='<div style="font-size:12px;color:rgba(255,255,255,.4);margin-bottom:6px">'+escHtml(tx.email)+'</div>';
     h+='<div style="display:flex;gap:8px;flex-wrap:wrap">';
     h+='<span style="font-size:11px;font-weight:700;color:#FBB924">'+methodLabel+'</span>';
     h+='<span style="font-size:11px;color:rgba(255,255,255,.5)">'+tx.pkg+'</span>';
