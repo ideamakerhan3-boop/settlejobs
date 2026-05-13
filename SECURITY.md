@@ -103,7 +103,7 @@ CORS on public API endpoints (`/api/v1/jobs`, `/api/v1/stats`) returns `Access-C
 |---|---|---|
 | Vercel function count at 12/12 cap | Operational | Adding a 13th file = silent deploy fail. Migrate `refund.js` → `admin-api.js` action when room is needed. |
 | Backup is in same Supabase project | Medium | If project gets deleted/compromised, backups go too. Off-Supabase replica is future work. |
-| Admin (`admin.html`) renders `innerHTML` with employer-supplied fields | Low | Stored XSS possible: malicious `<script>` in company name executes when admin views job. Mitigated by single-admin model (Leo); Leo would notice and remove. |
+| ~~Admin (`admin.html`) renders `innerHTML` with employer-supplied fields~~ | ~~Low~~ | **✅ Fixed PR #77 (2026-05-13)** — 12 callsites wrapped with `escHtml` (job title/company/loc/salary/email + tx co/email). `mailto:` href uses `encodeURIComponent`. |
 | stripe-webhook retry path uses email-only lock | Very low | Race between `SELECT cr2` and retry `UPDATE` could overwrite a concurrent credit change. Probability low; impact = credit balance discrepancy. Atomic-RPC fix is the proper solution. |
 | `_ACCOUNTS[em].pw` fallback on shared device | Low | Browser memory holds previously-logged-in users' SHA-256 hash. Shared-device residual risk. Not exploitable without local access. |
 | Daily-only health-check cron | Operational | Vercel Hobby plan caps cron frequency. Site outage between 12:00 UTC ticks = up to 24h detection lag. Synthetic external monitor (e.g., UptimeRobot 5min) would fix. |
@@ -124,3 +124,4 @@ For credential compromise specifically:
 
 - 2026-05-11: Comprehensive automated audit + manual review. 6 findings fixed (PR #66 / #68 / #69 / #70 / #72 / #73). 4 gaps acknowledged (above table).
 - 2026-05-12: Smoke test expanded to 27 checks including security-posture verification (PR #74). Audit re-run found no new high-priority items.
+- 2026-05-13: Admin innerHTML XSS gap (was: Low severity known gap) closed in PR #77. 12 employer-controlled fields now escaped via existing `escHtml` helper. SECURITY.md gap table updated.
