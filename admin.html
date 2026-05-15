@@ -4158,6 +4158,97 @@ function aTab(name, btn) {
   if(name==='jobs') renderAdminJobs();
   if(name==='employers') renderAdminEmployers();
   if(name==='partners') renderAdminPartners();
+  if(name==='analytics') renderAdminAnalytics();
+}
+
+// ── Analytics dashboard (📈 분석 tab) ──────────────────────────────
+// Pulls aggregated counts only from admin-api `analytics_summary`. No raw row
+// data leaves the server — all DB queries are head:true counts plus a 10-row
+// recent-errors slice. Rendered as 3 funnel cards (signup / post_job / apply),
+// a 14-type 7d horizontal bar chart (nonzero only, descending), and an error
+// panel. Every dynamic string passes through escHtml to defuse XSS via
+// log messages or job/page URLs that ended up in event/error rows.
+async function renderAdminAnalytics() {
+  var box = document.getElementById('analytics-content');
+  if(!box) return;
+  box.innerHTML = '<div style="text-align:center;padding:40px;color:rgba(255,255,255,.3)"><div class="spinner" style="width:28px;height:28px;border:3px solid rgba(255,255,255,.1);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 12px"></div>분석 데이터 로딩 중…</div>';
+  var r;
+  try {
+    r = await _adminApi({action:'analytics_summary'});
+  } catch(e) {
+    box.innerHTML = '<div style="color:#F87171;font-size:13px">분석 데이터 로딩 실패: ' + escHtml((e&&e.message)||'network error') + '</div>';
+    return;
+  }
+  if(!r || r.error) {
+    box.innerHTML = '<div style="color:#F87171;font-size:13px">분석 데이터 로딩 실패: ' + escHtml((r&&r.error)||'unknown') + '</div>';
+    return;
+  }
+  var f = r.funnels_30d || {};
+  var errs = r.errors || {};
+  var byType = (r.events && r.events.by_type_7d) || {};
+  var total7d = (r.events && r.events.total_7d) || 0;
+  var generated = r.generated_at ? new Date(r.generated_at).toLocaleString('ko-KR') : '';
+
+  function funnelCard(title, a, b, rate, aLabel, bLabel) {
+    var rateTxt = (rate === null || rate === undefined) ? '—' : (rate + '%');
+    return '<div class="admin-card" style="flex:1;min-width:180px">'+
+      '<div style="font-size:11px;font-weight:800;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">'+escHtml(title)+' (30d)</div>'+
+      '<div style="font-size:28px;font-weight:900;color:#fff;letter-spacing:-.02em">'+escHtml(String(rateTxt))+'</div>'+
+      '<div style="font-size:12px;color:rgba(255,255,255,.5);margin-top:4px">'+escHtml(String(b))+' '+escHtml(bLabel)+' / '+escHtml(String(a))+' '+escHtml(aLabel)+'</div>'+
+    '</div>';
+  }
+
+  // Sort types desc by count, drop zeros so empty rows don't clutter.
+  var typeRows = Object.keys(byType).map(function(t){return [t, byType[t]||0];})
+    .filter(function(p){return p[1] > 0;})
+    .sort(function(a,b){return b[1]-a[1];});
+  var maxCount = typeRows.length ? typeRows[0][1] : 1;
+  var typeBars = typeRows.length === 0
+    ? '<div style="color:rgba(255,255,255,.4);font-size:12px;padding:12px 0">최근 7일간 이벤트 없음.</div>'
+    : typeRows.map(function(p){
+        var pct = Math.max(2, Math.round((p[1] / maxCount) * 100));
+        return '<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">'+
+          '<div style="width:160px;font-size:12px;color:rgba(255,255,255,.7);font-family:monospace">'+escHtml(p[0])+'</div>'+
+          '<div style="flex:1;height:18px;background:rgba(255,255,255,.05);border-radius:4px;overflow:hidden"><div style="width:'+pct+'%;height:100%;background:linear-gradient(90deg,#3B82F6,#60A5FA);border-radius:4px"></div></div>'+
+          '<div style="width:64px;text-align:right;font-size:12px;color:#fff;font-weight:700">'+escHtml(String(p[1]))+'</div>'+
+        '</div>';
+      }).join('');
+
+  var recentErrs = (errs.recent || []);
+  var errRows = recentErrs.length === 0
+    ? '<div style="color:rgba(255,255,255,.4);font-size:12px;padding:8px 0">최근 에러 없음.</div>'
+    : recentErrs.map(function(e){
+        var ts = e.ts ? new Date(e.ts).toLocaleString('ko-KR') : '';
+        var resolved = e.resolved ? '✓' : '⚠';
+        return '<div style="border-bottom:1px solid rgba(255,255,255,.06);padding:6px 0;font-size:12px">'+
+          '<span style="color:'+(e.resolved?'#4ADE80':'#F87171')+';font-family:monospace;margin-right:6px">'+resolved+'</span>'+
+          '<span style="color:rgba(255,255,255,.4);font-family:monospace;margin-right:8px">'+escHtml(ts)+'</span>'+
+          '<span style="color:rgba(255,255,255,.85)">'+escHtml(String(e.message||'').substring(0,200))+'</span>'+
+          (e.page ? '<span style="color:rgba(255,255,255,.4);margin-left:8px;font-family:monospace">'+escHtml(e.page)+'</span>' : '')+
+        '</div>';
+      }).join('');
+
+  box.innerHTML =
+    '<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:20px">'+
+      funnelCard('가입 퍼널', f.signup ? f.signup.starts : 0, f.signup ? f.signup.completes : 0, f.signup ? f.signup.rate_pct : null, 'starts', 'completes')+
+      funnelCard('공고 등록 퍼널', f.post_job ? f.post_job.starts : 0, f.post_job ? f.post_job.completes : 0, f.post_job ? f.post_job.rate_pct : null, 'starts', 'completes')+
+      funnelCard('지원 클릭 퍼널', f.apply ? f.apply.views : 0, f.apply ? f.apply.clicks : 0, f.apply ? f.apply.rate_pct : null, 'views', 'clicks')+
+    '</div>'+
+    '<div class="admin-card" style="margin-bottom:20px">'+
+      '<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:12px">'+
+        '<div style="font-size:12px;font-weight:800;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:1px">이벤트 유형별 (최근 7일)</div>'+
+        '<div style="font-size:11px;color:rgba(255,255,255,.4)">합계 '+escHtml(String(total7d))+'</div>'+
+      '</div>'+
+      typeBars+
+    '</div>'+
+    '<div class="admin-card" style="margin-bottom:12px">'+
+      '<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:12px">'+
+        '<div style="font-size:12px;font-weight:800;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:1px">에러 로그</div>'+
+        '<div style="font-size:11px;color:rgba(255,255,255,.55)">미해결 <strong style="color:#F87171">'+escHtml(String(errs.unresolved||0))+'</strong> · 최근 24h <strong>'+escHtml(String(errs.last_24h||0))+'</strong></div>'+
+      '</div>'+
+      errRows+
+    '</div>'+
+    (generated ? '<div style="font-size:10px;color:rgba(255,255,255,.3);margin-top:8px">생성 시각 '+escHtml(generated)+'</div>' : '');
 }
 
 var _adminJobPage = 0;
@@ -7663,6 +7754,7 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
         <button class="admin-tab-btn" onclick="aTab('revenue',this)" id="atb-revenue">💰 수익</button>
         <button class="admin-tab-btn" onclick="aTab('reports',this)" id="atb-reports">⚠️ 이슈공고 <span class="admin-badge admin-badge-red" id="atb-reports-cnt">0</span></button>
         <button class="admin-tab-btn" onclick="aTab('partners',this)" id="atb-partners">🤝 파트너</button>
+        <button class="admin-tab-btn" onclick="aTab('analytics',this)" id="atb-analytics">📈 분석</button>
         <button class="admin-tab-btn" onclick="aTab('settings',this)" id="atb-settings">⚙️ 설정</button>
       </div>
       <button class="admin-tab-btn" onclick="go('home')" style="color:rgba(255,255,255,.4);margin-left:auto;flex-shrink:0"><span class="admin-exit-full">← 나가기</span><span class="admin-exit-icon" style="display:none">✕</span></button>
@@ -8058,6 +8150,12 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
           <button class="abtn abtn-g" style="margin-top:8px;width:100%;padding:12px" onclick="submitCreatePromo()">✅ 코드 생성</button>
         </div>
       </div>
+    </div>
+
+    <!-- Analytics -->
+    <div class="admin-tab-pane admin-body-pad" id="ap-analytics">
+      <div class="admin-h2">📈 분석 대시보드</div>
+      <div id="analytics-content" style="color:rgba(255,255,255,.5);font-size:13px">탭을 열면 로드합니다.</div>
     </div>
 
     <!-- Settings -->

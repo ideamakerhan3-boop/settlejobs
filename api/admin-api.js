@@ -301,6 +301,73 @@ export default async function handler(req, res) {
       });
     }
 
+    // ──────────────── ANALYTICS SUMMARY (admin dashboard) ────────────────
+    // Aggregated counts only — no row data leaves the server, keeps payload tiny
+    // and avoids leaking session_id / email lists. All head: true queries.
+    if (action === 'analytics_summary') {
+      const TYPES = [
+        'pageview', 'job_view', 'job_apply_click', 'signup_start',
+        'signup_complete', 'login', 'post_job_start', 'post_job_complete',
+        'alert_optin', 'alert_save', 'unsubscribe', 'feed_click',
+        'social_share', 'cta_click'
+      ];
+      const since7   = new Date(Date.now() -  7 * 86400_000).toISOString();
+      const since30  = new Date(Date.now() - 30 * 86400_000).toISOString();
+      const since24h = new Date(Date.now() -  1 * 86400_000).toISOString();
+
+      const countEvents = (type, since) =>
+        sb.from('events').select('id', { count: 'exact', head: true })
+          .eq('event_type', type).gte('ts', since)
+          .then(r => r.count || 0).catch(() => 0);
+
+      const [
+        typeCounts7d,
+        signupStarts30d, signupCompletes30d,
+        postStarts30d,   postCompletes30d,
+        viewCount30d,    applyCount30d,
+        errsUnresolved,  errs24h,
+        recentErrsRes,
+      ] = await Promise.all([
+        Promise.all(TYPES.map(t => countEvents(t, since7))).then(arr =>
+          TYPES.reduce((acc, t, i) => (acc[t] = arr[i], acc), {})
+        ),
+        countEvents('signup_start',     since30),
+        countEvents('signup_complete',  since30),
+        countEvents('post_job_start',   since30),
+        countEvents('post_job_complete',since30),
+        countEvents('job_view',         since30),
+        countEvents('job_apply_click',  since30),
+        sb.from('error_logs').select('id', { count: 'exact', head: true })
+          .eq('resolved', false).then(r => r.count || 0).catch(() => 0),
+        sb.from('error_logs').select('id', { count: 'exact', head: true })
+          .gte('ts', since24h).then(r => r.count || 0).catch(() => 0),
+        sb.from('error_logs')
+          .select('id, ts, message, page, resolved')
+          .order('ts', { ascending: false }).limit(10),
+      ]);
+
+      const rate = (a, b) => (b > 0 ? Math.round((a / b) * 1000) / 10 : null);
+
+      return res.status(200).json({
+        ok: true,
+        generated_at: new Date().toISOString(),
+        events: {
+          by_type_7d: typeCounts7d,
+          total_7d:   Object.values(typeCounts7d).reduce((s, n) => s + n, 0),
+        },
+        funnels_30d: {
+          signup:   { starts: signupStarts30d, completes: signupCompletes30d, rate_pct: rate(signupCompletes30d, signupStarts30d) },
+          post_job: { starts: postStarts30d,   completes: postCompletes30d,   rate_pct: rate(postCompletes30d, postStarts30d) },
+          apply:    { views:  viewCount30d,    clicks:    applyCount30d,      rate_pct: rate(applyCount30d, viewCount30d) },
+        },
+        errors: {
+          unresolved: errsUnresolved,
+          last_24h:   errs24h,
+          recent:     (recentErrsRes && recentErrsRes.data) || [],
+        }
+      });
+    }
+
     return res.status(400).json({ error: 'Unknown action: ' + action });
 
   } catch (err) {
