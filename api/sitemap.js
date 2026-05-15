@@ -28,6 +28,38 @@ function normalizeLoc(loc, prov) {
   return String(loc).replace(re, '').trim();
 }
 
+// 47 major Canadian cities with concentrated youth/student populations
+// (university towns + metro cores + each provincial capital). Pre-seeded into
+// the sitemap so /locations/<slug> URLs are indexable before the first job
+// goes live in that city — the renderer falls back to a "check back" copy
+// with stable schema. Keep alphabetized within each province for review hygiene.
+const PRE_SEED_CITIES = [
+  // Ontario — GTA, Hamilton-Niagara, Ottawa, Southwestern uni towns
+  ['Toronto', 'ON'], ['Mississauga', 'ON'], ['Brampton', 'ON'], ['Ottawa', 'ON'],
+  ['Hamilton', 'ON'], ['London', 'ON'], ['Kitchener', 'ON'], ['Waterloo', 'ON'],
+  ['Windsor', 'ON'], ['Markham', 'ON'], ['Guelph', 'ON'], ['Oshawa', 'ON'],
+  ['St. Catharines', 'ON'],
+  // Quebec — Montreal metro + Quebec City + uni towns
+  ['Montreal', 'QC'], ['Quebec City', 'QC'], ['Gatineau', 'QC'], ['Sherbrooke', 'QC'],
+  ['Trois-Rivieres', 'QC'],
+  // British Columbia — Lower Mainland + Victoria + Okanagan + Island
+  ['Vancouver', 'BC'], ['Surrey', 'BC'], ['Burnaby', 'BC'], ['Richmond', 'BC'],
+  ['Victoria', 'BC'], ['Coquitlam', 'BC'], ['Kelowna', 'BC'], ['Nanaimo', 'BC'],
+  ['Abbotsford', 'BC'], ['Langley', 'BC'],
+  // Alberta — Calgary, Edmonton + uni towns
+  ['Calgary', 'AB'], ['Edmonton', 'AB'], ['Red Deer', 'AB'], ['Lethbridge', 'AB'],
+  // Manitoba
+  ['Winnipeg', 'MB'], ['Brandon', 'MB'],
+  // Saskatchewan
+  ['Saskatoon', 'SK'], ['Regina', 'SK'],
+  // Atlantic — Halifax metro, NB triad, NL/PE capitals
+  ['Halifax', 'NS'], ['Dartmouth', 'NS'], ['Sydney', 'NS'],
+  ['Moncton', 'NB'], ['Saint John', 'NB'], ['Fredericton', 'NB'],
+  ['St. Johns', 'NL'], ['Charlottetown', 'PE'],
+  // Territorial capitals
+  ['Whitehorse', 'YT'], ['Yellowknife', 'NT'], ['Iqaluit', 'NU'],
+];
+
 export default async function handler(req, res) {
   // Multi-format dispatch: ?format=rss or Accept: application/rss+xml → job feed
   // for aggregators (Indeed, ZipRecruiter, Jooble, Adzuna). Default = sitemap.xml
@@ -92,6 +124,17 @@ export default async function handler(req, res) {
     const lastmod = j.created_at ? j.created_at.split('T')[0] : null;
     if (!prev || (lastmod && lastmod > prev)) locMap.set(slug, lastmod);
   }
+
+  // Pre-seed 47 major Canadian cities with high youth/student population so
+  // the URLs are crawlable even before any employer posts there. The /locations/<slug>
+  // renderer handles 0-active-jobs with a "check back" copy + stable URL, so an
+  // empty page still absorbs "youth jobs in <city>" / "student jobs in <city>"
+  // search intent. dedupe-against active-job slugs so we don't double-emit.
+  for (const [city, prov] of PRE_SEED_CITIES) {
+    const slug = slugify(city + '-' + prov);
+    if (slug && !locMap.has(slug)) locMap.set(slug, null);
+  }
+
   const locEntries = Array.from(locMap.entries()).map(function(entry) {
     const [slug, lastmod] = entry;
     return `  <url>
