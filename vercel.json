@@ -21,6 +21,7 @@
     { "source": "/admin/(.*)", "destination": "/admin.html" },
     { "source": "/forgot", "destination": "/index.html" },
     { "source": "/reset", "destination": "/index.html" },
+    { "source": "/reset/:token", "destination": "/index.html" },
     { "source": "/home", "destination": "/index.html" },
     { "source": "/jobs/:id", "destination": "/api/job-page?id=:id" },
     { "source": "/locations", "destination": "/api/job-page?type=location" },

@@ -2216,11 +2216,23 @@ async function saveAlertPrefs() {
   }
 }
 
+// Stash on first parse so the URL bar can be wiped (no history/referrer leak)
+// while the submit handler still has the token in memory.
+var _resetToken = null;
 function _resetTokenFromUrl() {
+  if (_resetToken) return _resetToken;
   try {
-    var p = new URLSearchParams(window.location.search);
-    var t = (p.get('token')||'').trim();
-    return /^[a-f0-9]{64}$/.test(t) ? t : '';
+    // Path style /reset/<hex64> is the format emailed now. Plain "?token=<hex>"
+    // got QP-mangled in transit ("=23..." decoded as "#..." in some renderers,
+    // truncating the token). The query parser stays as a grace-period fallback
+    // for old in-flight links.
+    var path = window.location.pathname || '';
+    var m = path.match(/^\/reset\/([a-f0-9]{64})\/?$/i);
+    var t = m ? m[1] : ((new URLSearchParams(window.location.search)).get('token')||'').trim();
+    if (!/^[a-f0-9]{64}$/i.test(t)) return '';
+    _resetToken = t.toLowerCase();
+    try { window.history.replaceState({}, '', '/reset'); } catch(e){}
+    return _resetToken;
   } catch(e) { return ''; }
 }
 

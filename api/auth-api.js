@@ -277,7 +277,9 @@ export default async function handler(req, res) {
             reset_token_expires_at: expiresAt,
           }).eq('email', acct.email);
 
-          const resetUrl = 'https://www.canadayouthhire.ca/reset?token=' + token;
+          // Path-style avoids quoted-printable "=23"→"#" mangling in plain-text
+          // email bodies; vercel.json rewrites /reset/<token> to /index.html.
+          const resetUrl = 'https://www.canadayouthhire.ca/reset/' + token;
           const { sendTransactionalEmail } = await import('./_lib/email.js');
           await sendTransactionalEmail({
             template_id: 'password_reset',
